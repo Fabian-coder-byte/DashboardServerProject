@@ -1,0 +1,12 @@
+{
+  "hostname": "spaceplayer98-server",
+  "refreshInterval": 10000,
+  "alerts": {
+    "tempWarning": 60,
+    "tempError": 70,
+    "ramWarning": 80,
+    "ramError": 90,
+    "diskWarning": 85,
+    "diskError": 90
+  }
+}

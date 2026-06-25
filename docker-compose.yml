@@ -1,0 +1,33 @@
+services:
+  picontrol-api:
+    build: ./backend
+    container_name: picontrol-api
+    ports:
+      - "5005:5005"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./data:/app/data
+    environment:
+      - NODE_ENV=production
+      - PORT=5005
+      - DATA_PATH=/app/data
+    # privileged: necessario per lsblk (vede tutti i dispositivi) e nsenter (rimonta nell'host)
+    privileged: true
+    restart: unless-stopped
+    networks:
+      - picontrol-net
+
+  picontrol-frontend:
+    build: ./frontend
+    container_name: picontrol-frontend
+    ports:
+      - "4300:80"
+    depends_on:
+      - picontrol-api
+    restart: unless-stopped
+    networks:
+      - picontrol-net
+
+networks:
+  picontrol-net:
+    driver: bridge
