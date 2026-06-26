@@ -14,6 +14,7 @@ import { formatBytes, formatUptime, progressClass } from '../../core/utils/forma
   standalone: true,
   imports: [CommonModule, RouterLink],
   template: `
+    <div class="page">
     <div class="page-header">
       <h1><i class="bi bi-grid-1x2-fill"></i> Dashboard</h1>
       <p>Panoramica sistema{{ system ? ' — ' + system.hostname : '' }}</p>
@@ -24,7 +25,7 @@ import { formatBytes, formatUptime, progressClass } from '../../core/utils/forma
 
     @if (system) {
       <!-- Metriche principali -->
-      <div class="grid grid-4 mb-20">
+      <div class="grid grid-4">
         <div class="card">
           <div class="card__title"><i class="bi bi-cpu"></i> CPU</div>
           <div class="card__value">{{ system.cpuUsage }}%</div>
@@ -58,7 +59,7 @@ import { formatBytes, formatUptime, progressClass } from '../../core/utils/forma
       </div>
 
       <!-- Rete + Docker + Alert -->
-      <div class="grid grid-3 mb-20">
+      <div class="grid grid-3">
         <div class="card">
           <div class="card__title"><i class="bi bi-activity"></i> Rete</div>
           @for (iface of system.network.slice(0, 2); track iface.interface) {
@@ -144,6 +145,7 @@ import { formatBytes, formatUptime, progressClass } from '../../core/utils/forma
         }
       </div>
     }
+    </div><!-- /page -->
   `
 })
 export class DashboardComponent implements OnInit, OnDestroy {

@@ -12,6 +12,7 @@ import { formatBytes } from '../../core/utils/format.utils';
   standalone: true,
   imports: [CommonModule, RouterLink],
   template: `
+    <div class="page">
     <div class="page-header">
       <h1><i class="bi bi-box-seam-fill"></i> Docker</h1>
       <p>{{ running }} container in esecuzione su {{ containers.length }} totali</p>
@@ -22,7 +23,7 @@ import { formatBytes } from '../../core/utils/format.utils';
 
     @if (!loading && !error) {
       <!-- Summary cards -->
-      <div class="grid grid-4 mb-20">
+      <div class="grid grid-4">
         <div class="card">
           <div class="card__title"><i class="bi bi-play-circle"></i> Running</div>
           <div class="card__value text-green">{{ running }}</div>
@@ -42,7 +43,7 @@ import { formatBytes } from '../../core/utils/format.utils';
       </div>
 
       <!-- Filter -->
-      <div style="display: flex; gap: 8px; margin-bottom: 16px">
+      <div style="display: flex; gap: 8px">
         <button class="btn btn-secondary btn-sm" [class.btn-primary]="filter === 'all'" (click)="filter = 'all'">Tutti</button>
         <button class="btn btn-secondary btn-sm" [class.btn-primary]="filter === 'running'" (click)="filter = 'running'">Running</button>
         <button class="btn btn-secondary btn-sm" [class.btn-primary]="filter === 'stopped'" (click)="filter = 'stopped'">Stopped</button>
@@ -108,6 +109,7 @@ import { formatBytes } from '../../core/utils/format.utils';
         }
       </div>
     }
+    </div><!-- /page -->
   `
 })
 export class DockerComponent implements OnInit, OnDestroy {

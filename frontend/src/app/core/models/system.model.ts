@@ -2,6 +2,7 @@ export interface SystemOverview {
   hostname: string;
   platform: string;
   distro: string;
+  release?: string;
   uptime: number;
   cpuUsage: number;
   ram: { total: number; used: number; free: number; usedPercent: number; };

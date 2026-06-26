@@ -24,6 +24,7 @@ interface ProcessStat {
   standalone: true,
   imports: [CommonModule],
   template: `
+    <div class="page">
     <div class="page-header">
       <h1><i class="bi bi-cpu-fill"></i> Sistema</h1>
       <p>Risorse hardware e andamento nel tempo — aggiornamento ogni 5 s</p>
@@ -229,6 +230,7 @@ interface ProcessStat {
         </div>
       }
     }
+    </div><!-- /page -->
   `,
   styles: [`
     /* ── Specs ─────────────────────────────────────────────────── */

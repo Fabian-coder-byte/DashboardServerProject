@@ -1,6 +1,42 @@
 const express = require('express');
 const si = require('systeminformation');
+const fs = require('fs');
 const router = express.Router();
+
+// ── Lettura info OS dall'host (montato come /host/os-release) ────────────────
+// Quando il backend gira in Docker (Alpine), questi file danno i dati reali del Raspberry
+function readHostOsRelease() {
+  try {
+    const raw = fs.readFileSync('/host/os-release', 'utf8');
+    const map = {};
+    raw.split('\n').forEach(line => {
+      const eq = line.indexOf('=');
+      if (eq > 0) {
+        const key = line.slice(0, eq).trim();
+        const val = line.slice(eq + 1).trim().replace(/^["']|["']$/g, '');
+        map[key] = val;
+      }
+    });
+    return {
+      distro:   map['NAME']             || map['ID']      || null,
+      release:  map['VERSION_ID']       || null,
+      codename: map['VERSION_CODENAME'] || null,
+      id:       map['ID']               || null,
+    };
+  } catch (_) { return null; }
+}
+
+function readHostHostname() {
+  try { return fs.readFileSync('/host/hostname', 'utf8').trim(); } catch (_) { return null; }
+}
+
+// Legge il modello hardware dal device-tree del Raspberry Pi (stringa con null byte finale)
+function readHostModel() {
+  try {
+    const buf = fs.readFileSync('/host/device-tree/model');
+    return buf.toString('utf8').replace(/\0/g, '').trim();
+  } catch (_) { return null; }
+}
 
 // ── Ring buffer metriche storiche (max 10 min, campione ogni 10 s) ────────────
 const HISTORY_MAX = 60;
@@ -38,10 +74,15 @@ router.get('/overview', async (req, res) => {
       si.networkStats()
     ]);
 
+    // Preferisce i dati dell'host montati; se mancano usa quelli del container come fallback
+    const hostOs       = readHostOsRelease();
+    const hostHostname = readHostHostname();
+
     res.json({
-      hostname: osInfo.hostname,
-      platform: osInfo.platform,
-      distro: osInfo.distro,
+      hostname: hostHostname || osInfo.hostname,
+      platform: 'linux',
+      distro:   hostOs?.distro   || osInfo.distro,
+      release:  hostOs?.release  || osInfo.release,
       uptime: time.uptime,
       cpuUsage: Math.round(load.currentLoad * 10) / 10,
       ram: {
@@ -117,6 +158,14 @@ router.get('/specs', async (req, res) => {
     const [cpu, mem, os, sys] = await Promise.all([
       si.cpu(), si.mem(), si.osInfo(), si.system()
     ]);
+
+    const hostOs       = readHostOsRelease();
+    const hostHostname = readHostHostname();
+    // Modello hardware: device-tree (Raspberry Pi) > systeminformation > fallback
+    const hostModel    = readHostModel() || sys.model || '';
+    // Produttore: inferito dal modello se non disponibile
+    const manufacturer = sys.manufacturer || (hostModel.toLowerCase().includes('raspberry') ? 'Raspberry Pi Foundation' : '');
+
     res.json({
       cpu: {
         manufacturer:  cpu.manufacturer,
@@ -125,9 +174,16 @@ router.get('/specs', async (req, res) => {
         cores:         cpu.cores,
         physicalCores: cpu.physicalCores
       },
-      ram:    { total: mem.total },
-      os:     { distro: os.distro, release: os.release, kernel: os.kernel, arch: os.arch, hostname: os.hostname },
-      system: { manufacturer: sys.manufacturer, model: sys.model }
+      ram: { total: mem.total },
+      os: {
+        distro:   hostOs?.distro   || os.distro,
+        release:  hostOs?.release  || os.release,
+        codename: hostOs?.codename || '',
+        kernel:   os.kernel,   // corretto: viene dal kernel host condiviso
+        arch:     os.arch,     // corretto: architettura reale
+        hostname: hostHostname || os.hostname
+      },
+      system: { manufacturer, model: hostModel }
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -11,12 +11,13 @@ import { Container } from '../../core/models/docker.model';
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
+    <div class="page">
     <div class="page-header">
       <h1><i class="bi bi-terminal-fill"></i> Log</h1>
       <p>Visualizza i log dei container Docker</p>
     </div>
 
-    <div class="card mb-20">
+    <div class="card">
       <div style="display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap">
         <div>
           <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px">Container</label>
@@ -72,6 +73,7 @@ import { Container } from '../../core/models/docker.model';
         Seleziona un container per visualizzare i log
       </div>
     }
+    </div><!-- /page -->
   `,
   styles: [`
     .select-input {

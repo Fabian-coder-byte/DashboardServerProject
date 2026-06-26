@@ -17,6 +17,7 @@ interface RemountState {
   standalone: true,
   imports: [CommonModule],
   template: `
+    <div class="page">
     <div class="page-header">
       <h1><i class="bi bi-hdd-fill"></i> Storage</h1>
       <p>Filesystem montati e dispositivi collegati</p>
@@ -214,6 +215,7 @@ interface RemountState {
     @if (copied) {
       <div class="toast"><i class="bi bi-clipboard-check"></i> Comando copiato!</div>
     }
+    </div><!-- /page -->
   `,
   styles: [`
     .section-title {

@@ -15,6 +15,7 @@ interface ActionFeedback {
   standalone: true,
   imports: [CommonModule],
   template: `
+    <div class="page">
     <div class="page-header">
       <h1><i class="bi bi-layers-fill"></i> Servizi</h1>
       <p>{{ online }} online · {{ offline }} offline · {{ unknown }} sconosciuti</p>
@@ -101,6 +102,7 @@ interface ActionFeedback {
         </div>
       }
     }
+    </div><!-- /page -->
   `,
   styles: [`
     .service-card { transition: border-color .15s, opacity .15s; }

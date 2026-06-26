@@ -7,6 +7,10 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./data:/app/data
+      # File OS dell'host montati in sola lettura — usati per mostrare info reali del Raspberry
+      - /etc/os-release:/host/os-release:ro
+      - /etc/hostname:/host/hostname:ro
+      - /proc/device-tree:/host/device-tree:ro
     environment:
       - NODE_ENV=production
       - PORT=5005
