@@ -3,7 +3,21 @@ import { CommonModule } from '@angular/common';
 import Chart, { ChartConfiguration } from 'chart.js/auto';
 import { ApiService } from '../../core/services/api.service';
 import { MetricSample, SystemSpecs } from '../../core/models/system.model';
+import { Container } from '../../core/models/docker.model';
 import { formatBytes } from '../../core/utils/format.utils';
+
+interface ContainerStat {
+  name:     string;
+  cpuPct:   number;
+  ramBytes: number;
+  ramPct:   number;
+}
+
+interface ProcessStat {
+  name: string;
+  cpu:  number;
+  mem:  number;
+}
 
 @Component({
   selector: 'app-system',
@@ -124,140 +138,226 @@ import { formatBytes } from '../../core/utils/format.utils';
         </div>
       </div>
     }
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!--  Utilizzo risorse per container                           -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    @if (containerStats.length > 0) {
+
+      <div class="section-divider">
+        <span><i class="bi bi-box-seam-fill"></i> Risorse per container</span>
+        <span class="badge badge-gray">{{ containerStats.length }} in esecuzione</span>
+      </div>
+
+      <!-- Bar chart CPU + RAM affiancati -->
+      <div class="grid grid-2">
+        <div class="card">
+          <div class="section-title"><i class="bi bi-cpu" style="color:#3b82f6"></i> CPU per container</div>
+          <div [style.height.px]="barHeight()"><canvas #cpuBarCanvas></canvas></div>
+        </div>
+        <div class="card">
+          <div class="section-title"><i class="bi bi-memory" style="color:#22c55e"></i> RAM per container</div>
+          <div [style.height.px]="barHeight()"><canvas #ramBarCanvas></canvas></div>
+        </div>
+      </div>
+
+      <!-- Tabella dettaglio con doppie barre -->
+      <div class="card">
+        <div class="section-title">Dettaglio completo</div>
+        <div class="ctr-table">
+          <div class="ctr-head">
+            <span>Container</span>
+            <span>CPU</span>
+            <span>RAM</span>
+          </div>
+          @for (c of containersByCpu; track c.name) {
+            <div class="ctr-row">
+              <span class="ctr-name">{{ c.name }}</span>
+
+              <div class="ctr-cell">
+                <div class="ctr-track">
+                  <div class="ctr-fill" [class]="valueClass(c.cpuPct, 30, 70)"
+                       [style.width.%]="c.cpuPct"></div>
+                </div>
+                <span class="ctr-val">{{ c.cpuPct }}%</span>
+              </div>
+
+              <div class="ctr-cell">
+                <div class="ctr-track">
+                  <div class="ctr-fill" [class]="valueClass(c.ramPct, 50, 80)"
+                       [style.width.%]="c.ramPct"></div>
+                </div>
+                <span class="ctr-val">{{ fmtBytes(c.ramBytes) }}</span>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Top processi di sistema -->
+      @if (topProcesses.length > 0) {
+        <div class="card">
+          <div class="section-title"><i class="bi bi-list-task"></i> Top processi di sistema</div>
+          <div class="ctr-table">
+            <div class="ctr-head">
+              <span>Processo</span>
+              <span>CPU</span>
+              <span>RAM</span>
+            </div>
+            @for (p of topProcesses; track p.name + p.cpu) {
+              <div class="ctr-row">
+                <span class="ctr-name">{{ p.name }}</span>
+
+                <div class="ctr-cell">
+                  <div class="ctr-track">
+                    <div class="ctr-fill" [class]="valueClass(p.cpu, 10, 30)"
+                         [style.width.%]="Math.min(p.cpu, 100)"></div>
+                  </div>
+                  <span class="ctr-val">{{ p.cpu }}%</span>
+                </div>
+
+                <div class="ctr-cell">
+                  <div class="ctr-track">
+                    <div class="ctr-fill" [class]="valueClass(p.mem, 5, 15)"
+                         [style.width.%]="Math.min(p.mem * 5, 100)"></div>
+                  </div>
+                  <span class="ctr-val">{{ p.mem }}%</span>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    }
   `,
   styles: [`
-    .specs-card {
-      margin-bottom: 0;
-    }
+    /* ── Specs ─────────────────────────────────────────────────── */
     .specs-title {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-secondary);
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+      font-size: 13px; font-weight: 600; color: var(--text-secondary);
+      margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
     }
     .specs-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
       gap: 12px 24px;
     }
-    .spec-label {
-      font-size: 11px;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: .5px;
-      margin-bottom: 3px;
-    }
-    .spec-value {
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text-primary);
-    }
+    .spec-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 3px; }
+    .spec-value { font-size: 13px; font-weight: 500; color: var(--text-primary); }
 
+    /* ── Line charts ────────────────────────────────────────────── */
     .chart-card { display: flex; flex-direction: column; }
-    .chart-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 12px;
-    }
-    .chart-label {
-      font-size: 12px;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: .5px;
-      margin-bottom: 2px;
-    }
-    .chart-big-value {
-      font-size: 24px;
-      font-weight: 700;
-      line-height: 1;
-    }
+    .chart-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+    .chart-label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 2px; }
+    .chart-big-value { font-size: 24px; font-weight: 700; line-height: 1; }
     .chart-area { flex: 1; height: 130px; }
     .chart-area--wide { height: 160px; }
 
-    /* Colori valori in base alla soglia */
+    /* ── Colori soglia ─────────────────────────────────────────── */
     .ok      { color: #22c55e; }
     .warning { color: #f59e0b; }
     .danger  { color: #ef4444; }
 
-    /* Barre per core */
-    .section-title {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-secondary);
-      margin-bottom: 14px;
-    }
-    .cores-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 10px;
-    }
-    .core-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .core-label {
-      font-size: 12px;
-      color: var(--text-muted);
-      width: 48px;
-      flex-shrink: 0;
-    }
-    .core-track {
-      flex: 1;
-      height: 6px;
-      background: var(--bg-hover);
-      border-radius: 3px;
-      overflow: hidden;
-    }
-    .core-fill {
-      height: 100%;
-      border-radius: 3px;
-      transition: width .4s ease;
-    }
+    /* ── Core bars ─────────────────────────────────────────────── */
+    .section-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+    .cores-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+    .core-row { display: flex; align-items: center; gap: 10px; }
+    .core-label { font-size: 12px; color: var(--text-muted); width: 48px; flex-shrink: 0; }
+    .core-track { flex: 1; height: 6px; background: var(--bg-hover); border-radius: 3px; overflow: hidden; }
+    .core-fill { height: 100%; border-radius: 3px; transition: width .4s ease; }
     .core-fill.ok      { background: #22c55e; }
     .core-fill.warning { background: #f59e0b; }
     .core-fill.danger  { background: #ef4444; }
-    .core-pct {
-      font-size: 12px;
+    .core-pct { font-size: 12px; font-weight: 600; color: var(--text-secondary); width: 36px; text-align: right; flex-shrink: 0; }
+
+    /* ── Sezione container ─────────────────────────────────────── */
+    .section-divider {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-top: 1px solid var(--border-color);
+      font-size: 13px;
       font-weight: 600;
       color: var(--text-secondary);
-      width: 36px;
-      text-align: right;
-      flex-shrink: 0;
+      span:first-child { display: flex; align-items: center; gap: 8px; }
     }
+
+    /* ── Tabella container/processi ────────────────────────────── */
+    .ctr-table { display: flex; flex-direction: column; gap: 2px; }
+    .ctr-head {
+      display: grid;
+      grid-template-columns: 160px 1fr 1fr;
+      padding: 4px 6px 8px;
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 4px;
+    }
+    .ctr-row {
+      display: grid;
+      grid-template-columns: 160px 1fr 1fr;
+      align-items: center;
+      gap: 10px;
+      padding: 5px 6px;
+      border-radius: 6px;
+      transition: background .12s;
+      &:hover { background: var(--bg-hover); }
+    }
+    .ctr-name { font-size: 13px; font-weight: 500; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ctr-cell { display: flex; align-items: center; gap: 8px; }
+    .ctr-track { flex: 1; height: 6px; background: var(--bg-hover); border-radius: 3px; overflow: hidden; min-width: 60px; }
+    .ctr-fill { height: 100%; border-radius: 3px; transition: width .5s ease; }
+    .ctr-fill.ok      { background: #22c55e; }
+    .ctr-fill.warning { background: #f59e0b; }
+    .ctr-fill.danger  { background: #ef4444; }
+    .ctr-val { font-size: 12px; font-weight: 600; color: var(--text-secondary); white-space: nowrap; min-width: 52px; text-align: right; }
   `]
 })
 export class SystemComponent implements OnInit, AfterViewInit, OnDestroy {
   private api = inject(ApiService);
 
+  protected Math = Math;
+
   specs: SystemSpecs | null = null;
   coreLoads: number[] = [];
+  containerStats:  ContainerStat[] = [];
+  containersByCpu: ContainerStat[] = [];
+  topProcesses: ProcessStat[] = [];
+
   current = { cpu: 0, ram: 0, temp: null as number | null, netRx: 0, netTx: 0 };
+  private totalRam = 0;
 
   fmtBytes = formatBytes;
 
+  // ── Line chart refs ──────────────────────────────────────────────
   @ViewChild('cpuCanvas')  private cpuRef!:  ElementRef<HTMLCanvasElement>;
   @ViewChild('ramCanvas')  private ramRef!:  ElementRef<HTMLCanvasElement>;
   @ViewChild('tempCanvas') private tempRef!: ElementRef<HTMLCanvasElement>;
   @ViewChild('netCanvas')  private netRef!:  ElementRef<HTMLCanvasElement>;
 
-  private cpuChart?: Chart;
-  private ramChart?: Chart;
-  private tempChart?: Chart;
-  private netChart?: Chart;
+  // ── Bar chart refs ───────────────────────────────────────────────
+  @ViewChild('cpuBarCanvas') private cpuBarRef?: ElementRef<HTMLCanvasElement>;
+  @ViewChild('ramBarCanvas') private ramBarRef?: ElementRef<HTMLCanvasElement>;
 
-  private labels:    string[]           = [];
-  private cpuData:   (number | null)[]  = [];
-  private ramData:   (number | null)[]  = [];
-  private tempData:  (number | null)[]  = [];
-  private netRxData: (number | null)[]  = [];
-  private netTxData: (number | null)[]  = [];
+  private cpuChart?:    Chart;
+  private ramChart?:    Chart;
+  private tempChart?:   Chart;
+  private netChart?:    Chart;
+  private cpuBarChart?: Chart;
+  private ramBarChart?: Chart;
+
+  private labels:    string[]          = [];
+  private cpuData:   (number | null)[] = [];
+  private ramData:   (number | null)[] = [];
+  private tempData:  (number | null)[] = [];
+  private netRxData: (number | null)[] = [];
+  private netTxData: (number | null)[] = [];
 
   private pollTimer?: ReturnType<typeof setInterval>;
+
+  // ── Public helpers ───────────────────────────────────────────────
 
   valueClass(val: number, warn: number, danger: number): string {
     if (val >= danger) return 'danger';
@@ -265,18 +365,26 @@ export class SystemComponent implements OnInit, AfterViewInit, OnDestroy {
     return 'ok';
   }
 
+  barHeight(): number {
+    return Math.max(160, this.containerStats.length * 34);
+  }
+
+  // ── Lifecycle ────────────────────────────────────────────────────
+
   ngOnInit(): void {
-    this.api.getSystemSpecs().subscribe({ next: s => this.specs = s });
+    this.api.getSystemSpecs().subscribe({
+      next: s => {
+        this.specs = s;
+        this.totalRam = s.ram.total;
+      }
+    });
   }
 
   ngAfterViewInit(): void {
-    this.createCharts();
+    this.createLineCharts();
 
     this.api.getSystemHistory().subscribe({
-      next: (history) => {
-        history.forEach(s => this.pushSample(s));
-        this.updateCharts();
-      }
+      next: (history) => { history.forEach(s => this.pushSample(s)); this.updateLineCharts(); }
     });
 
     this.startPolling();
@@ -284,41 +392,11 @@ export class SystemComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     clearInterval(this.pollTimer);
-    [this.cpuChart, this.ramChart, this.tempChart, this.netChart].forEach(c => c?.destroy());
+    [this.cpuChart, this.ramChart, this.tempChart, this.netChart,
+     this.cpuBarChart, this.ramBarChart].forEach(c => c?.destroy());
   }
 
-  private pushSample(s: MetricSample): void {
-    const d = new Date(s.t * 1000);
-    this.labels.push(d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
-    this.cpuData.push(s.cpu);
-    this.ramData.push(s.ram);
-    this.tempData.push(s.temp);
-    this.netRxData.push(s.netRx);
-    this.netTxData.push(s.netTx);
-
-    const MAX = 60;
-    if (this.labels.length > MAX) {
-      this.labels.shift();
-      this.cpuData.shift();
-      this.ramData.shift();
-      this.tempData.shift();
-      this.netRxData.shift();
-      this.netTxData.shift();
-    }
-  }
-
-  private updateCharts(): void {
-    const set = (chart: Chart | undefined, ...datasets: (number | null)[][]) => {
-      if (!chart) return;
-      chart.data.labels = [...this.labels];
-      datasets.forEach((d, i) => chart.data.datasets[i].data = [...d]);
-      chart.update('none');
-    };
-    set(this.cpuChart,  this.cpuData);
-    set(this.ramChart,  this.ramData);
-    set(this.tempChart, this.tempData);
-    set(this.netChart,  this.netRxData, this.netTxData);
-  }
+  // ── Polling ──────────────────────────────────────────────────────
 
   private startPolling(): void {
     const poll = () => {
@@ -331,13 +409,22 @@ export class SystemComponent implements OnInit, AfterViewInit, OnDestroy {
             netRx: o.network.reduce((s, n) => s + n.rxSec, 0),
             netTx: o.network.reduce((s, n) => s + n.txSec, 0)
           };
+          if (!this.totalRam) this.totalRam = o.ram.total;
           this.pushSample({ t: Math.floor(Date.now() / 1000), ...this.current });
-          this.updateCharts();
+          this.updateLineCharts();
         }
       });
 
       this.api.getSystemCpu().subscribe({
         next: (c) => this.coreLoads = c.coresLoad ?? []
+      });
+
+      this.api.getContainers().subscribe({
+        next: (containers) => this.processContainers(containers)
+      });
+
+      this.api.getSystemProcesses().subscribe({
+        next: (data) => this.topProcesses = data.top.slice(0, 8)
       });
     };
 
@@ -345,51 +432,83 @@ export class SystemComponent implements OnInit, AfterViewInit, OnDestroy {
     this.pollTimer = setInterval(poll, 5000);
   }
 
-  private createCharts(): void {
+  // ── Container data ───────────────────────────────────────────────
+
+  private processContainers(containers: Container[]): void {
+    const running = containers.filter(c => c.status === 'running' && c.cpuUsage !== null);
+    const ram = this.totalRam || 1;
+
+    this.containerStats = running.map(c => ({
+      name:     c.name,
+      cpuPct:   c.cpuUsage ?? 0,
+      ramBytes: c.memoryUsage ?? 0,
+      ramPct:   Math.round(((c.memoryUsage ?? 0) / ram) * 100 * 10) / 10
+    }));
+
+    this.containersByCpu = [...this.containerStats].sort((a, b) => b.cpuPct - a.cpuPct);
+
+    this.updateBarCharts();
+  }
+
+  private updateBarCharts(): void {
+    if (!this.containerStats.length) return;
+
+    // Crea i bar chart la prima volta che ci sono dati, poi aggiorna
+    if (!this.cpuBarChart && this.cpuBarRef) this.createBarCharts();
+    if (!this.cpuBarChart || !this.ramBarChart) return;
+
+    const byCpu = [...this.containerStats].sort((a, b) => b.cpuPct - a.cpuPct);
+    const byRam = [...this.containerStats].sort((a, b) => b.ramPct - a.ramPct);
+
+    const cpuColors = byCpu.map(c =>
+      c.cpuPct >= 70 ? '#ef4444' : c.cpuPct >= 30 ? '#f59e0b' : '#3b82f6'
+    );
+    const ramColors = byRam.map(c =>
+      c.ramPct >= 70 ? '#ef4444' : c.ramPct >= 50 ? '#f59e0b' : '#22c55e'
+    );
+
+    this.cpuBarChart.data.labels              = byCpu.map(c => c.name);
+    this.cpuBarChart.data.datasets[0].data    = byCpu.map(c => c.cpuPct);
+    (this.cpuBarChart.data.datasets[0] as any).backgroundColor = cpuColors;
+    this.cpuBarChart.update('none');
+
+    this.ramBarChart.data.labels              = byRam.map(c => c.name);
+    this.ramBarChart.data.datasets[0].data    = byRam.map(c => c.ramPct);
+    (this.ramBarChart.data.datasets[0] as any).backgroundColor = ramColors;
+    // Tooltip personalizzato che mostra bytes reali
+    const byteMap = Object.fromEntries(byRam.map(c => [c.name, c.ramBytes]));
+    (this.ramBarChart.options as any).plugins.tooltip.callbacks.label =
+      (ctx: any) => ` ${ctx.parsed.x}%  (${formatBytes(byteMap[ctx.label] ?? 0)})`;
+    this.ramBarChart.update('none');
+  }
+
+  // ── Chart creation ───────────────────────────────────────────────
+
+  private createLineCharts(): void {
     const grid = 'rgba(255,255,255,0.05)';
     const tick = '#6b7280';
-
     const xAxis = {
       ticks: { color: tick, maxTicksLimit: 5, font: { size: 10 } },
       grid:  { color: grid }
     };
 
     const makeLineCfg = (
-      color: string,
-      yMax: number,
-      tickSuffix: string
+      color: string, yMax: number, suffix: string
     ): ChartConfiguration<'line', (number | null)[], string> => ({
       type: 'line',
       data: {
         labels: [],
         datasets: [{
-          data: [],
-          borderColor: color,
-          backgroundColor: color + '1a',  // ~10% opacity via hex
-          borderWidth: 1.5,
-          fill: true,
-          tension: 0.3,
-          pointRadius: 0,
-          spanGaps: true
+          data: [], borderColor: color, backgroundColor: color + '1a',
+          borderWidth: 1.5, fill: true, tension: 0.3, pointRadius: 0, spanGaps: true
         }]
       },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: false,
+        responsive: true, maintainAspectRatio: false, animation: false,
         plugins: { legend: { display: false } },
         scales: {
           x: xAxis,
-          y: {
-            min: 0,
-            max: yMax,
-            ticks: {
-              color: tick,
-              font: { size: 10 },
-              callback: (v) => v + tickSuffix
-            },
-            grid: { color: grid }
-          }
+          y: { min: 0, max: yMax, ticks: { color: tick, font: { size: 10 }, callback: v => v + suffix }, grid: { color: grid } }
         }
       }
     });
@@ -403,43 +522,88 @@ export class SystemComponent implements OnInit, AfterViewInit, OnDestroy {
       data: {
         labels: [],
         datasets: [
-          {
-            label: '↓ RX',
-            data: [],
-            borderColor: '#06b6d4',
-            backgroundColor: 'rgba(6,182,212,0.1)',
-            borderWidth: 1.5, fill: true, tension: 0.3, pointRadius: 0, spanGaps: true
-          },
-          {
-            label: '↑ TX',
-            data: [],
-            borderColor: '#a855f7',
-            backgroundColor: 'rgba(168,85,247,0.08)',
-            borderWidth: 1.5, fill: true, tension: 0.3, pointRadius: 0, spanGaps: true
-          }
+          { label: '↓ RX', data: [], borderColor: '#06b6d4', backgroundColor: 'rgba(6,182,212,0.1)',   borderWidth: 1.5, fill: true, tension: 0.3, pointRadius: 0, spanGaps: true },
+          { label: '↑ TX', data: [], borderColor: '#a855f7', backgroundColor: 'rgba(168,85,247,0.08)', borderWidth: 1.5, fill: true, tension: 0.3, pointRadius: 0, spanGaps: true }
         ]
       },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: false,
-        plugins: {
-          legend: { display: true, labels: { color: '#9ca3af', boxWidth: 12, font: { size: 11 } } }
-        },
+        responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: { legend: { display: true, labels: { color: '#9ca3af', boxWidth: 12, font: { size: 11 } } } },
         scales: {
           x: xAxis,
-          y: {
-            min: 0,
-            ticks: {
-              color: tick,
-              font: { size: 10 },
-              callback: (v) => formatBytes(Number(v)) + '/s'
-            },
-            grid: { color: grid }
-          }
+          y: { min: 0, ticks: { color: tick, font: { size: 10 }, callback: v => formatBytes(Number(v)) + '/s' }, grid: { color: grid } }
         }
       }
     };
     this.netChart = new Chart(this.netRef.nativeElement, netCfg);
+  }
+
+  private createBarCharts(): void {
+    if (!this.cpuBarRef || !this.ramBarRef) return;
+
+    const grid = 'rgba(255,255,255,0.05)';
+    const tick = '#6b7280';
+
+    const makeBarCfg = (
+      xMax: number, suffix: string
+    ): ChartConfiguration<'bar', number[], string> => ({
+      type: 'bar',
+      data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderRadius: 4, borderWidth: 0 }] },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: (ctx) => ` ${ctx.parsed.x}${suffix}` } }
+        },
+        scales: {
+          x: {
+            min: 0, max: xMax,
+            ticks: { color: tick, font: { size: 10 }, callback: v => v + suffix },
+            grid: { color: grid }
+          },
+          y: {
+            ticks: { color: '#d1d5db', font: { size: 11 } },
+            grid: { color: grid }
+          }
+        }
+      }
+    });
+
+    this.cpuBarChart = new Chart(this.cpuBarRef.nativeElement, makeBarCfg(100, '%'));
+    this.ramBarChart = new Chart(this.ramBarRef.nativeElement, makeBarCfg(100, '%'));
+  }
+
+  // ── Line chart helpers ───────────────────────────────────────────
+
+  private pushSample(s: MetricSample): void {
+    const d = new Date(s.t * 1000);
+    this.labels.push(d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    this.cpuData.push(s.cpu);
+    this.ramData.push(s.ram);
+    this.tempData.push(s.temp);
+    this.netRxData.push(s.netRx);
+    this.netTxData.push(s.netTx);
+
+    const MAX = 60;
+    if (this.labels.length > MAX) {
+      this.labels.shift(); this.cpuData.shift(); this.ramData.shift();
+      this.tempData.shift(); this.netRxData.shift(); this.netTxData.shift();
+    }
+  }
+
+  private updateLineCharts(): void {
+    const set = (chart: Chart | undefined, ...datasets: (number | null)[][]) => {
+      if (!chart) return;
+      chart.data.labels = [...this.labels];
+      datasets.forEach((d, i) => chart.data.datasets[i].data = [...d]);
+      chart.update('none');
+    };
+    set(this.cpuChart,  this.cpuData);
+    set(this.ramChart,  this.ramData);
+    set(this.tempChart, this.tempData);
+    set(this.netChart,  this.netRxData, this.netTxData);
   }
 }

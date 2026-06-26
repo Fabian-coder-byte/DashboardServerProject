@@ -27,6 +27,10 @@ export class ApiService {
     return this.http.get<CpuInfo>(`${this.base}/system/cpu`);
   }
 
+  getSystemProcesses(): Observable<{ all: number; running: number; top: { pid: number; name: string; cpu: number; mem: number; state: string }[] }> {
+    return this.http.get<any>(`${this.base}/system/processes`);
+  }
+
   getContainers(): Observable<Container[]> {
     return this.http.get<Container[]>(`${this.base}/docker/containers`);
   }
