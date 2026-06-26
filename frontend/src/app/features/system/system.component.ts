@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, AfterViewInit, ViewChild, ElementRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import Chart from 'chart.js/auto';
+import Chart, { ChartConfiguration } from 'chart.js/auto';
 import { ApiService } from '../../core/services/api.service';
 import { MetricSample, SystemSpecs } from '../../core/models/system.model';
 import { formatBytes } from '../../core/utils/format.utils';
@@ -346,63 +346,100 @@ export class SystemComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private createCharts(): void {
-    const grid  = 'rgba(255,255,255,0.05)';
-    const tick  = '#6b7280';
+    const grid = 'rgba(255,255,255,0.05)';
+    const tick = '#6b7280';
+
     const xAxis = {
       ticks: { color: tick, maxTicksLimit: 5, font: { size: 10 } },
       grid:  { color: grid }
     };
-    const pctY = {
-      min: 0, max: 100,
-      ticks: { color: tick, font: { size: 10 }, callback: (v: number | string) => v + '%' },
-      grid: { color: grid }
-    };
-    const line = (color: string) => ({
-      type: 'line' as const,
-      data: { labels: [] as string[], datasets: [{ data: [] as (number | null)[], borderColor: color,
-        backgroundColor: color.replace(')', ',0.1)').replace('rgb', 'rgba'),
-        borderWidth: 1.5, fill: true, tension: 0.3, pointRadius: 0, spanGaps: true }] },
-      options: {
-        responsive: true, maintainAspectRatio: false, animation: false,
-        plugins: { legend: { display: false } },
-        scales: { x: xAxis, y: pctY }
-      }
-    });
 
-    this.cpuChart  = new Chart(this.cpuRef.nativeElement,  line('#3b82f6'));
-    this.ramChart  = new Chart(this.ramRef.nativeElement,  line('#22c55e'));
-
-    // Temperatura: scala 0–90°C
-    const tempCfg = line('#f59e0b');
-    (tempCfg.options.scales.y as any).max = 90;
-    (tempCfg.options.scales.y as any).ticks.callback = (v: number | string) => v + '°';
-    this.tempChart = new Chart(this.tempRef.nativeElement, tempCfg);
-
-    // Rete: scala automatica, due dataset
-    this.netChart = new Chart(this.netRef.nativeElement, {
+    const makeLineCfg = (
+      color: string,
+      yMax: number,
+      tickSuffix: string
+    ): ChartConfiguration<'line', (number | null)[], string> => ({
       type: 'line',
       data: {
         labels: [],
-        datasets: [
-          { label: '↓ RX', data: [], borderColor: '#06b6d4',
-            backgroundColor: 'rgba(6,182,212,0.1)',  borderWidth: 1.5, fill: true, tension: 0.3, pointRadius: 0, spanGaps: true },
-          { label: '↑ TX', data: [], borderColor: '#a855f7',
-            backgroundColor: 'rgba(168,85,247,0.08)', borderWidth: 1.5, fill: true, tension: 0.3, pointRadius: 0, spanGaps: true }
-        ]
+        datasets: [{
+          data: [],
+          borderColor: color,
+          backgroundColor: color + '1a',  // ~10% opacity via hex
+          borderWidth: 1.5,
+          fill: true,
+          tension: 0.3,
+          pointRadius: 0,
+          spanGaps: true
+        }]
       },
       options: {
-        responsive: true, maintainAspectRatio: false, animation: false,
-        plugins: { legend: { display: true, labels: { color: '#9ca3af', boxWidth: 12, font: { size: 11 } } } },
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: { legend: { display: false } },
         scales: {
           x: xAxis,
           y: {
             min: 0,
-            ticks: { color: tick, font: { size: 10 },
-              callback: (v: number | string) => formatBytes(Number(v)) + '/s' },
+            max: yMax,
+            ticks: {
+              color: tick,
+              font: { size: 10 },
+              callback: (v) => v + tickSuffix
+            },
             grid: { color: grid }
           }
         }
       }
     });
+
+    this.cpuChart  = new Chart(this.cpuRef.nativeElement,  makeLineCfg('#3b82f6', 100, '%'));
+    this.ramChart  = new Chart(this.ramRef.nativeElement,  makeLineCfg('#22c55e', 100, '%'));
+    this.tempChart = new Chart(this.tempRef.nativeElement, makeLineCfg('#f59e0b',  90, '°'));
+
+    const netCfg: ChartConfiguration<'line', (number | null)[], string> = {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [
+          {
+            label: '↓ RX',
+            data: [],
+            borderColor: '#06b6d4',
+            backgroundColor: 'rgba(6,182,212,0.1)',
+            borderWidth: 1.5, fill: true, tension: 0.3, pointRadius: 0, spanGaps: true
+          },
+          {
+            label: '↑ TX',
+            data: [],
+            borderColor: '#a855f7',
+            backgroundColor: 'rgba(168,85,247,0.08)',
+            borderWidth: 1.5, fill: true, tension: 0.3, pointRadius: 0, spanGaps: true
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: {
+          legend: { display: true, labels: { color: '#9ca3af', boxWidth: 12, font: { size: 11 } } }
+        },
+        scales: {
+          x: xAxis,
+          y: {
+            min: 0,
+            ticks: {
+              color: tick,
+              font: { size: 10 },
+              callback: (v) => formatBytes(Number(v)) + '/s'
+            },
+            grid: { color: grid }
+          }
+        }
+      }
+    };
+    this.netChart = new Chart(this.netRef.nativeElement, netCfg);
   }
 }
