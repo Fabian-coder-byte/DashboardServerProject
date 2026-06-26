@@ -32,18 +32,23 @@ function flattenDevices(devices, parentName = null) {
   for (const d of (devices ?? [])) {
     if (d.type === 'loop') continue; // escludi loop device (snap, ecc.)
 
+    // lsblk >= 2.37 usa "mountpoints" (array) invece di "mountpoint" (stringa)
+    const mountpoint = d.mountpoint
+      || (Array.isArray(d.mountpoints) ? d.mountpoints.find(m => m) : null)
+      || null;
+
     result.push({
       name: d.name,
       path: `/dev/${d.name}`,
       size: parseInt(d.size) || 0,
       type: d.type,           // disk | part | rom | lvm
       fstype: d.fstype || null,
-      mountpoint: d.mountpoint || null,
+      mountpoint,
       label: d.label || null,
       vendor: (d.vendor ?? '').trim() || null,
       model: (d.model ?? '').trim() || null,
       parent: parentName,
-      mounted: !!d.mountpoint
+      mounted: !!mountpoint
     });
 
     if (d.children?.length) {
@@ -90,8 +95,9 @@ router.get('/', async (req, res) => {
 // GET /api/storage/devices — tutti i dispositivi a blocchi (inclusi non montati)
 router.get('/devices', async (req, res) => {
   try {
+    // MOUNTPOINTS (plurale) è usato da lsblk >= 2.37; MOUNTPOINT come fallback per versioni precedenti
     const { stdout } = await execAsync(
-      'lsblk -J -b -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT,LABEL,VENDOR,MODEL'
+      'lsblk -J -b -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT,MOUNTPOINTS,LABEL,VENDOR,MODEL 2>/dev/null || lsblk -J -b -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT,LABEL,VENDOR,MODEL'
     );
     const data = JSON.parse(stdout);
     const devices = flattenDevices(data.blockdevices);
