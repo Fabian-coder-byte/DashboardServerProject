@@ -13,6 +13,9 @@ services:
       - DATA_PATH=/app/data
     # privileged: necessario per lsblk (vede tutti i dispositivi) e nsenter (rimonta nell'host)
     privileged: true
+    # host.docker.internal risolve l'IP dell'host Raspberry, usato negli health check
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
     networks:
       - picontrol-net

@@ -20,6 +20,12 @@ function loadCatalog() {
   }
 }
 
+// Traduce localhost → host.docker.internal così gli health check raggiungono l'host Raspberry
+// anche quando il backend gira dentro un container Docker
+function resolveHealthUrl(url) {
+  return url.replace(/^(https?:\/\/)localhost(:\d+|\/|$)/, '$1host.docker.internal$2');
+}
+
 // GET /api/services
 router.get('/', (req, res) => {
   res.json(loadCatalog());
@@ -33,9 +39,10 @@ router.get('/health', async (req, res) => {
     if (!svc.healthcheck?.url) {
       return { name: svc.name, status: 'unknown', responseTime: null };
     }
+    const url = resolveHealthUrl(svc.healthcheck.url);
     const start = Date.now();
     try {
-      await axios.get(svc.healthcheck.url, { timeout: 3000 });
+      await axios.get(url, { timeout: 3000 });
       return { name: svc.name, status: 'online', responseTime: Date.now() - start };
     } catch {
       return { name: svc.name, status: 'offline', responseTime: null };
@@ -101,9 +108,10 @@ router.get('/:name/health', async (req, res) => {
   if (!service) return res.status(404).json({ error: 'Servizio non trovato' });
   if (!service.healthcheck?.url) return res.json({ name: service.name, status: 'unknown', responseTime: null });
 
+  const url = resolveHealthUrl(service.healthcheck.url);
   const start = Date.now();
   try {
-    await axios.get(service.healthcheck.url, { timeout: 3000 });
+    await axios.get(url, { timeout: 3000 });
     res.json({ name: service.name, status: 'online', responseTime: Date.now() - start });
   } catch {
     res.json({ name: service.name, status: 'offline', responseTime: null });
