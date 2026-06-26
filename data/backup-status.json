@@ -1,0 +1,28 @@
+{
+  "backups": [
+    {
+      "name": "Jellyfin config",
+      "lastRun": "2026-06-25T03:00:00Z",
+      "status": "success",
+      "sizeBytes": 471859200,
+      "destination": "/mnt/storage1/backups/jellyfin",
+      "nextRun": "2026-06-27T03:00:00Z"
+    },
+    {
+      "name": "Nextcloud data",
+      "lastRun": "2026-06-24T04:00:00Z",
+      "status": "success",
+      "sizeBytes": 2147483648,
+      "destination": "/mnt/storage1/backups/nextcloud",
+      "nextRun": "2026-06-27T04:00:00Z"
+    },
+    {
+      "name": "Immich config",
+      "lastRun": null,
+      "status": "never",
+      "sizeBytes": null,
+      "destination": "/mnt/storage1/backups/immich",
+      "nextRun": null
+    }
+  ]
+}

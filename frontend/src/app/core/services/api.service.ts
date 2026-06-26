@@ -1,9 +1,9 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { SystemOverview, MetricSample, SystemSpecs, CpuInfo } from '../models/system.model';
+import { SystemOverview, MetricSample, SystemSpecs, CpuInfo, NetworkInfo } from '../models/system.model';
 import { Container, ContainerDetail, DockerInfo } from '../models/docker.model';
-import { Service, ServiceHealth, ServiceActionResult, ServiceDetail, Alert, BlockDevice } from '../models/service.model';
+import { Service, ServiceHealth, ServiceActionResult, ServiceDetail, Alert, BlockDevice, BackupData } from '../models/service.model';
 import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
@@ -90,5 +90,13 @@ export class ApiService {
 
   getDockerLogs(containerName: string, tail = 100): Observable<{ container: string; lines: string[]; total: number }> {
     return this.http.get<{ container: string; lines: string[]; total: number }>(`${this.base}/logs/docker/${containerName}?tail=${tail}`);
+  }
+
+  getNetworkInfo(): Observable<NetworkInfo> {
+    return this.http.get<NetworkInfo>(`${this.base}/network`);
+  }
+
+  getBackupStatus(): Observable<BackupData> {
+    return this.http.get<BackupData>(`${this.base}/backup`);
   }
 }

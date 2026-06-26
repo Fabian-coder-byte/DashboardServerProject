@@ -4,6 +4,7 @@ const fs = require('fs');
 const { exec } = require('child_process');
 const { promisify } = require('util');
 const execAsync = promisify(exec);
+const log = require('../logger');
 const router = express.Router();
 
 // ── Lettura info OS dall'host (montato come /host/os-release) ────────────────
@@ -59,7 +60,7 @@ async function collectSample() {
       netTx:  Math.round(net.reduce((s, n) => s + (n.tx_sec ?? 0), 0))
     });
     if (metricsHistory.length > HISTORY_MAX) metricsHistory.shift();
-  } catch (_) {}
+  } catch (err) { log.warn('system', 'raccolta metriche storiche fallita', err); }
 }
 
 collectSample();
@@ -215,7 +216,6 @@ router.post('/control', async (req, res) => {
   }
 
   if (action === 'reboot' || action === 'poweroff') {
-    // Risposta inviata subito — poi eseguiamo il comando, altrimenti la risposta non raggiunge il client
     res.json({
       success: true,
       message: action === 'reboot'
@@ -226,7 +226,8 @@ router.post('/control', async (req, res) => {
       ? 'nsenter -t 1 -m -- systemctl reboot'
       : 'nsenter -t 1 -m -- systemctl poweroff';
     setTimeout(() => {
-      execAsync(cmd).catch(err => console.error(`[system/control] ${action}:`, err.message));
+      log.info('system', `esecuzione ${action}`);
+      execAsync(cmd).catch(err => log.error('system', `${action} fallito`, err));
     }, 800);
     return;
   }

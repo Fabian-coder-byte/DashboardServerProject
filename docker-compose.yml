@@ -10,13 +10,15 @@ services:
       # File OS dell'host montati in sola lettura — usati per mostrare info reali del Raspberry
       - /etc/os-release:/host/os-release:ro
       - /etc/hostname:/host/hostname:ro
-      - /proc/device-tree:/host/device-tree:ro
+      # /proc/device-tree è presente solo su Raspberry Pi — ometti su altri sistemi
+      # - /proc/device-tree:/host/device-tree:ro
     environment:
       - NODE_ENV=production
       - PORT=5005
       - DATA_PATH=/app/data
-    # privileged: necessario per lsblk (vede tutti i dispositivi) e nsenter (rimonta nell'host)
+    # privileged + pid:host: necessari per lsblk, nsenter verso host (network, mount, riavvio)
     privileged: true
+    pid: host
     # host.docker.internal risolve l'IP dell'host Raspberry, usato negli health check
     extra_hosts:
       - "host.docker.internal:host-gateway"

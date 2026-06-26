@@ -36,3 +36,14 @@ export interface CpuInfo {
   currentLoad: number;
   coresLoad: number[];
 }
+
+export interface NetworkInfo {
+  hostname: string | null;
+  localIp: string | null;
+  interfaces: Array<{ name: string; ip4: string | null }>;
+  tailscale: {
+    online: boolean;
+    ip: string | null;
+    hostname: string | null;
+  };
+}

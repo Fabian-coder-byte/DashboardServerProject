@@ -86,6 +86,19 @@ export interface BlockDevice {
   mounted: boolean;
 }
 
+export interface BackupEntry {
+  name: string;
+  lastRun: string | null;
+  status: 'success' | 'failed' | 'running' | 'never';
+  sizeBytes: number | null;
+  destination: string;
+  nextRun: string | null;
+}
+
+export interface BackupData {
+  backups: BackupEntry[];
+}
+
 export interface StorageFilesystem {
   mount: string;
   filesystem: string;

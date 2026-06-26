@@ -34,5 +34,13 @@ export const routes: Routes = [
     path: 'system',
     loadComponent: () => import('./features/system/system.component').then(m => m.SystemComponent)
   },
+  {
+    path: 'network',
+    loadComponent: () => import('./features/network/network.component').then(m => m.NetworkComponent)
+  },
+  {
+    path: 'backup',
+    loadComponent: () => import('./features/backup/backup.component').then(m => m.BackupComponent)
+  },
   { path: '**', redirectTo: '/dashboard' }
 ];

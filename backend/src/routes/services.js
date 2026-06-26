@@ -4,6 +4,7 @@ const path = require('path');
 const yaml = require('js-yaml');
 const axios = require('axios');
 const Docker = require('dockerode');
+const log = require('../logger');
 const router = express.Router();
 
 const docker = new Docker({ socketPath: '/var/run/docker.sock' });
@@ -44,7 +45,8 @@ router.get('/health', async (req, res) => {
     try {
       await axios.get(url, { timeout: 3000 });
       return { name: svc.name, status: 'online', responseTime: Date.now() - start };
-    } catch {
+    } catch (err) {
+      log.warn('services', `health check fallito: ${svc.name} (${url})`, err.message);
       return { name: svc.name, status: 'offline', responseTime: null };
     }
   }));
@@ -152,7 +154,7 @@ router.get('/:name/details', async (req, res) => {
         ports: (c.Ports || []).filter(p => p.PublicPort).map(p => `${p.PublicPort}:${p.PrivatePort}`)
       }));
     } catch (err) {
-      console.error('[services/details] Docker:', err.message);
+      log.warn('services', `lettura container per progetto "${project}" fallita`, err);
     }
   }
 

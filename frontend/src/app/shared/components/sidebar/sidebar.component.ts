@@ -145,6 +145,8 @@ export class SidebarComponent {
     { path: '/docker',    label: 'Docker',     icon: 'box-seam-fill' },
     { path: '/services',  label: 'Servizi',    icon: 'layers-fill' },
     { path: '/storage',   label: 'Storage',    icon: 'hdd-fill' },
+    { path: '/network',   label: 'Rete',       icon: 'wifi' },
+    { path: '/backup',    label: 'Backup',     icon: 'cloud-check-fill' },
     { path: '/logs',      label: 'Log',        icon: 'terminal-fill' },
   ];
 
