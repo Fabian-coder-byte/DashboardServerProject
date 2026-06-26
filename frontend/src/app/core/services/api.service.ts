@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { SystemOverview } from '../models/system.model';
 import { Container, ContainerDetail, DockerInfo } from '../models/docker.model';
-import { Service, ServiceHealth, Alert, BlockDevice } from '../models/service.model';
+import { Service, ServiceHealth, ServiceActionResult, Alert, BlockDevice } from '../models/service.model';
 import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
@@ -33,6 +33,17 @@ export class ApiService {
 
   getServicesHealth(): Observable<ServiceHealth[]> {
     return this.http.get<ServiceHealth[]>(`${this.base}/services/health`);
+  }
+
+  getServiceHealth(name: string): Observable<ServiceHealth> {
+    return this.http.get<ServiceHealth>(`${this.base}/services/${encodeURIComponent(name)}/health`);
+  }
+
+  serviceAction(name: string, action: 'start' | 'stop' | 'restart'): Observable<ServiceActionResult> {
+    return this.http.post<ServiceActionResult>(
+      `${this.base}/services/${encodeURIComponent(name)}/compose`,
+      { action }
+    );
   }
 
   getStorage(): Observable<{ disks: any[]; filesystems: any[] }> {

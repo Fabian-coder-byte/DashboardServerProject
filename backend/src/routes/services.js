@@ -3,7 +3,10 @@ const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
 const axios = require('axios');
+const Docker = require('dockerode');
 const router = express.Router();
+
+const docker = new Docker({ socketPath: '/var/run/docker.sock' });
 
 const CATALOG_PATH = path.join(process.env.DATA_PATH || '/app/data', 'service-catalog.yml');
 
@@ -40,6 +43,56 @@ router.get('/health', async (req, res) => {
   }));
 
   res.json(checks);
+});
+
+// POST /api/services/:name/compose  { action: 'start' | 'stop' | 'restart' }
+router.post('/:name/compose', async (req, res) => {
+  const { action } = req.body;
+  if (!['start', 'stop', 'restart'].includes(action)) {
+    return res.status(400).json({ error: 'Azione non valida. Usa: start, stop, restart.' });
+  }
+
+  const service = loadCatalog().find(s => s.name.toLowerCase() === req.params.name.toLowerCase());
+  if (!service) return res.status(404).json({ error: 'Servizio non trovato' });
+
+  // Il nome progetto Compose si ricava dalla directory del compose_path, oppure da compose_project esplicito
+  const project = service.compose_project
+    || (service.compose_path ? path.basename(path.dirname(service.compose_path)) : null);
+
+  if (!project) {
+    return res.status(400).json({ error: 'Configura compose_path o compose_project nel service-catalog.yml per questo servizio.' });
+  }
+
+  try {
+    const containers = await docker.listContainers({
+      all: true,
+      filters: JSON.stringify({ label: [`com.docker.compose.project=${project}`] })
+    });
+
+    if (containers.length === 0) {
+      return res.status(404).json({ error: `Nessun container trovato per il progetto Compose "${project}". Verifica che il servizio sia stato avviato almeno una volta con docker compose up.` });
+    }
+
+    const results = await Promise.allSettled(containers.map(async (c) => {
+      const container = docker.getContainer(c.Id);
+      try {
+        if (action === 'start')   await container.start();
+        if (action === 'stop')    await container.stop({ t: 10 });
+        if (action === 'restart') await container.restart({ t: 10 });
+      } catch (err) {
+        // 304 = container già nello stato richiesto, non è un errore reale
+        if (err.statusCode !== 304) throw err;
+      }
+      return c.Names[0].replace('/', '');
+    }));
+
+    const succeeded = results.filter(r => r.status === 'fulfilled').map(r => r.value);
+    const failed    = results.filter(r => r.status === 'rejected').map(r => r.reason?.message ?? 'Errore sconosciuto');
+
+    res.json({ action, project, containers: containers.length, succeeded, failed });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // GET /api/services/:name/health

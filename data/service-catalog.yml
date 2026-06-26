@@ -59,6 +59,7 @@ services:
     url_local: http://raspberry.local:3000
     url_tailscale: http://spaceplayer98-server:3000
     port: 3000
+    compose_path: /srv/docker/adguard/docker-compose.yml
     expose: lan
     criticality: high
     healthcheck:
@@ -73,6 +74,7 @@ services:
     url_local: http://raspberry.local:9000
     url_tailscale: http://spaceplayer98-server:9000
     port: 9000
+    compose_path: /srv/docker/portainer/docker-compose.yml
     expose: tailscale
     criticality: medium
     healthcheck:
@@ -87,6 +89,7 @@ services:
     url_local: http://raspberry.local:3001
     url_tailscale: http://spaceplayer98-server:3001
     port: 3001
+    compose_path: /srv/docker/uptime-kuma/docker-compose.yml
     expose: tailscale
     criticality: low
     healthcheck:

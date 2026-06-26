@@ -10,6 +10,16 @@ export interface Service {
   exposure: string;
   criticality: string;
   healthcheck?: { type: string; url: string; };
+  compose_path?: string;
+  compose_project?: string;
+}
+
+export interface ServiceActionResult {
+  action: string;
+  project: string;
+  containers: number;
+  succeeded: string[];
+  failed: string[];
 }
 
 export interface ServiceHealth {
