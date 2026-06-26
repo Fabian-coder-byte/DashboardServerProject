@@ -1,10 +1,11 @@
 services:
+  # ── Media ───────────────────────────────────────────────────────────────────
   - name: Jellyfin
     description: Media server per film, serie TV e cartoni
     category: Media
     type: docker
     icon: tv
-    url_local: http://raspberry.local:8096
+    url_local: http://spaceplayer98-server.local:8096
     url_tailscale: http://spaceplayer98-server:8096
     port: 8096
     compose_path: /srv/docker/jellyfin/docker-compose.yml
@@ -17,12 +18,78 @@ services:
       type: http
       url: http://localhost:8096
 
+  - name: Navidrome
+    description: Server musicale personale, compatibile Subsonic/Airsonic
+    category: Media
+    type: docker
+    icon: music
+    url_local: http://spaceplayer98-server.local:4533
+    url_tailscale: http://spaceplayer98-server:4533
+    port: 4533
+    compose_path: /srv/docker/navidrome/docker-compose.yml
+    volumes: []
+    exposure: tailscale
+    criticality: low
+    healthcheck:
+      type: http
+      url: http://localhost:4533
+
+  - name: Audiobookshelf
+    description: Server per audiolibri e podcast
+    category: Media
+    type: docker
+    icon: headphones
+    url_local: http://spaceplayer98-server.local:13378
+    url_tailscale: http://spaceplayer98-server:13378
+    port: 13378
+    compose_path: /srv/docker/audiobookshelf/docker-compose.yml
+    volumes: []
+    exposure: tailscale
+    criticality: low
+    healthcheck:
+      type: http
+      url: http://localhost:13378
+
+  # ── Libri & Lettura ──────────────────────────────────────────────────────────
+  - name: Kavita
+    description: Reader per manga, fumetti e libri
+    category: Media
+    type: docker
+    icon: book-open
+    url_local: http://spaceplayer98-server.local:5000
+    url_tailscale: http://spaceplayer98-server:5000
+    port: 5000
+    compose_path: /srv/docker/kavita/docker-compose.yml
+    volumes: []
+    exposure: tailscale
+    criticality: low
+    healthcheck:
+      type: http
+      url: http://localhost:5000
+
+  - name: Calibre Web
+    description: Libreria ebook accessibile via browser
+    category: Media
+    type: docker
+    icon: book
+    url_local: http://spaceplayer98-server.local:8086
+    url_tailscale: http://spaceplayer98-server:8086
+    port: 8086
+    compose_path: /srv/docker/calibre-web/docker-compose.yml
+    volumes: []
+    exposure: tailscale
+    criticality: low
+    healthcheck:
+      type: http
+      url: http://localhost:8086
+
+  # ── Foto ────────────────────────────────────────────────────────────────────
   - name: Immich
     description: Backup e gestione foto personali
     category: Photos
     type: docker
     icon: image
-    url_local: http://raspberry.local:2283
+    url_local: http://spaceplayer98-server.local:2283
     url_tailscale: http://spaceplayer98-server:2283
     port: 2283
     compose_path: /srv/docker/immich/docker-compose.yml
@@ -34,12 +101,13 @@ services:
       type: http
       url: http://localhost:2283
 
+  # ── File & Storage ───────────────────────────────────────────────────────────
   - name: Nextcloud
     description: Cloud personale per documenti, calendario e file
     category: Files
     type: docker
     icon: cloud
-    url_local: http://raspberry.local:8080
+    url_local: http://spaceplayer98-server.local:8080
     url_tailscale: http://spaceplayer98-server:8080
     port: 8080
     compose_path: /srv/docker/nextcloud/docker-compose.yml
@@ -51,47 +119,213 @@ services:
       type: http
       url: http://localhost:8080
 
+  - name: File Browser
+    description: Gestore file via browser con upload/download
+    category: Files
+    type: docker
+    icon: folder
+    url_local: http://spaceplayer98-server.local:8081
+    url_tailscale: http://spaceplayer98-server:8081
+    port: 8081
+    compose_path: /srv/docker/filebrowser/docker-compose.yml
+    volumes: []
+    exposure: tailscale
+    criticality: low
+    healthcheck:
+      type: http
+      url: http://localhost:8081
+
+  - name: Syncthing
+    description: Sincronizzazione file P2P tra dispositivi
+    category: Files
+    type: docker
+    icon: refresh-cw
+    url_local: http://spaceplayer98-server.local:8384
+    url_tailscale: http://spaceplayer98-server:8384
+    port: 8384
+    compose_path: /srv/docker/syncthing/docker-compose.yml
+    volumes: []
+    exposure: lan
+    criticality: medium
+    healthcheck:
+      type: http
+      url: http://localhost:8384
+
+  # ── Note & Memo ──────────────────────────────────────────────────────────────
+  - name: Memos
+    description: App per note veloci e memo personali
+    category: Utility
+    type: docker
+    icon: sticky-note
+    url_local: http://spaceplayer98-server.local:5230
+    url_tailscale: http://spaceplayer98-server:5230
+    port: 5230
+    compose_path: /srv/docker/memos/docker-compose.yml
+    volumes: []
+    exposure: tailscale
+    criticality: low
+    healthcheck:
+      type: http
+      url: http://localhost:5230
+
+  - name: Note App
+    description: Applicazione note personale custom
+    category: Utility
+    type: docker
+    icon: pen-square
+    url_local: http://spaceplayer98-server.local:8888
+    url_tailscale: http://spaceplayer98-server:8888
+    port: 8888
+    compose_path: /srv/docker/note-app/docker-compose.yml
+    volumes: []
+    exposure: tailscale
+    criticality: low
+    healthcheck:
+      type: http
+      url: http://localhost:8888
+
+  # ── Networking ───────────────────────────────────────────────────────────────
   - name: AdGuard Home
     description: DNS e ad-blocker di rete
     category: Networking
     type: docker
     icon: shield-check
-    url_local: http://raspberry.local:3000
+    url_local: http://spaceplayer98-server.local:3000
     url_tailscale: http://spaceplayer98-server:3000
     port: 3000
     compose_path: /srv/docker/adguard/docker-compose.yml
-    expose: lan
+    exposure: lan
     criticality: high
     healthcheck:
       type: http
       url: http://localhost:3000
 
-  - name: Portainer
-    description: Gestione container Docker via UI
-    category: DevOps
+  - name: Nginx Proxy Manager
+    description: Reverse proxy con gestione certificati SSL via UI
+    category: Networking
     type: docker
-    icon: box
-    url_local: http://raspberry.local:9000
-    url_tailscale: http://spaceplayer98-server:9000
-    port: 9000
-    compose_path: /srv/docker/portainer/docker-compose.yml
-    expose: tailscale
-    criticality: medium
+    icon: globe
+    url_local: http://spaceplayer98-server.local:81
+    url_tailscale: http://spaceplayer98-server:81
+    port: 81
+    compose_path: /srv/docker/nginx-proxy-manager/docker-compose.yml
+    volumes: []
+    exposure: lan
+    criticality: high
     healthcheck:
       type: http
-      url: http://localhost:9000
+      url: http://localhost:81
 
+  # ── Monitoring ───────────────────────────────────────────────────────────────
   - name: Uptime Kuma
     description: Monitor uptime per servizi e siti
     category: Monitoring
     type: docker
     icon: activity
-    url_local: http://raspberry.local:3001
+    url_local: http://spaceplayer98-server.local:3001
     url_tailscale: http://spaceplayer98-server:3001
     port: 3001
     compose_path: /srv/docker/uptime-kuma/docker-compose.yml
-    expose: tailscale
+    exposure: tailscale
     criticality: low
     healthcheck:
       type: http
       url: http://localhost:3001
+
+  - name: Dozzle
+    description: Visualizzatore log Docker in tempo reale
+    category: Monitoring
+    type: docker
+    icon: file-text
+    url_local: http://spaceplayer98-server.local:8082
+    url_tailscale: http://spaceplayer98-server:8082
+    port: 8082
+    compose_path: /srv/docker/dozzle/docker-compose.yml
+    volumes: []
+    exposure: lan
+    criticality: low
+    healthcheck:
+      type: http
+      url: http://localhost:8082
+
+  - name: Homepage
+    description: Dashboard di avvio con link rapidi ai servizi
+    category: Monitoring
+    type: docker
+    icon: home
+    url_local: http://spaceplayer98-server.local:3000
+    url_tailscale: http://spaceplayer98-server:3000
+    port: 3000
+    compose_path: /srv/docker/homepage/docker-compose.yml
+    volumes: []
+    exposure: lan
+    criticality: low
+    healthcheck:
+      type: http
+      url: http://localhost:3000
+
+  # ── DevOps ───────────────────────────────────────────────────────────────────
+  - name: Portainer
+    description: Gestione container Docker via UI
+    category: DevOps
+    type: docker
+    icon: box
+    url_local: http://spaceplayer98-server.local:9000
+    url_tailscale: http://spaceplayer98-server:9000
+    port: 9000
+    compose_path: /srv/docker/portainer/docker-compose.yml
+    exposure: tailscale
+    criticality: medium
+    healthcheck:
+      type: http
+      url: http://localhost:9000
+
+  - name: Gitea
+    description: Piattaforma Git self-hosted per repository personali
+    category: DevOps
+    type: docker
+    icon: git-branch
+    url_local: http://spaceplayer98-server.local:3003
+    url_tailscale: http://spaceplayer98-server:3003
+    port: 3003
+    compose_path: /srv/docker/gitea/docker-compose.yml
+    volumes: []
+    exposure: tailscale
+    criticality: medium
+    healthcheck:
+      type: http
+      url: http://localhost:3003
+
+  # ── Database ─────────────────────────────────────────────────────────────────
+  - name: Adminer
+    description: Gestore database web (MySQL, PostgreSQL, SQLite)
+    category: Database
+    type: docker
+    icon: database
+    url_local: http://spaceplayer98-server.local:8083
+    url_tailscale: http://spaceplayer98-server:8083
+    port: 8083
+    compose_path: /srv/docker/adminer/docker-compose.yml
+    volumes: []
+    exposure: lan
+    criticality: low
+    healthcheck:
+      type: http
+      url: http://localhost:8083
+
+  # ── This Dashboard ───────────────────────────────────────────────────────────
+  - name: PiControl Dashboard
+    description: Dashboard di controllo per il home server
+    category: Monitoring
+    type: docker
+    icon: layout-dashboard
+    url_local: http://spaceplayer98-server.local:4300
+    url_tailscale: http://spaceplayer98-server:4300
+    port: 4300
+    compose_path: /srv/docker/picontrol/docker-compose.yml
+    volumes: []
+    exposure: tailscale
+    criticality: low
+    healthcheck:
+      type: http
+      url: http://localhost:4300
