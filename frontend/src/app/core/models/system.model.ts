@@ -10,3 +10,28 @@ export interface SystemOverview {
   loadAverage: number[];
   network: { interface: string; rxSec: number; txSec: number; }[];
 }
+
+export interface MetricSample {
+  t: number;
+  cpu: number;
+  ram: number;
+  temp: number | null;
+  netRx: number;
+  netTx: number;
+}
+
+export interface SystemSpecs {
+  cpu: { manufacturer: string; brand: string; speed: number; cores: number; physicalCores: number };
+  ram: { total: number };
+  os:  { distro: string; release: string; kernel: string; arch: string; hostname: string };
+  system: { manufacturer: string; model: string };
+}
+
+export interface CpuInfo {
+  manufacturer: string;
+  brand: string;
+  cores: number;
+  physicalCores: number;
+  currentLoad: number;
+  coresLoad: number[];
+}

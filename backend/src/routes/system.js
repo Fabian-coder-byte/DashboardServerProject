@@ -2,6 +2,30 @@ const express = require('express');
 const si = require('systeminformation');
 const router = express.Router();
 
+// ── Ring buffer metriche storiche (max 10 min, campione ogni 10 s) ────────────
+const HISTORY_MAX = 60;
+const metricsHistory = [];
+
+async function collectSample() {
+  try {
+    const [load, mem, temp, net] = await Promise.all([
+      si.currentLoad(), si.mem(), si.cpuTemperature(), si.networkStats()
+    ]);
+    metricsHistory.push({
+      t:      Math.floor(Date.now() / 1000),
+      cpu:    Math.round(load.currentLoad * 10) / 10,
+      ram:    Math.round((mem.used / mem.total) * 100),
+      temp:   temp.main !== null && temp.main !== undefined ? Math.round(temp.main * 10) / 10 : null,
+      netRx:  Math.round(net.reduce((s, n) => s + (n.rx_sec ?? 0), 0)),
+      netTx:  Math.round(net.reduce((s, n) => s + (n.tx_sec ?? 0), 0))
+    });
+    if (metricsHistory.length > HISTORY_MAX) metricsHistory.shift();
+  } catch (_) {}
+}
+
+collectSample();
+setInterval(collectSample, 10000);
+
 // GET /api/system/overview
 router.get('/overview', async (req, res) => {
   try {
@@ -77,6 +101,34 @@ router.get('/processes', async (req, res) => {
       }));
 
     res.json({ all: procs.all, running: procs.running, top });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/system/history
+router.get('/history', (req, res) => {
+  res.json(metricsHistory);
+});
+
+// GET /api/system/specs
+router.get('/specs', async (req, res) => {
+  try {
+    const [cpu, mem, os, sys] = await Promise.all([
+      si.cpu(), si.mem(), si.osInfo(), si.system()
+    ]);
+    res.json({
+      cpu: {
+        manufacturer:  cpu.manufacturer,
+        brand:         cpu.brand,
+        speed:         cpu.speed,
+        cores:         cpu.cores,
+        physicalCores: cpu.physicalCores
+      },
+      ram:    { total: mem.total },
+      os:     { distro: os.distro, release: os.release, kernel: os.kernel, arch: os.arch, hostname: os.hostname },
+      system: { manufacturer: sys.manufacturer, model: sys.model }
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

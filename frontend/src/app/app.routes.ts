@@ -26,5 +26,9 @@ export const routes: Routes = [
     path: 'logs',
     loadComponent: () => import('./features/logs/logs.component').then(m => m.LogsComponent)
   },
+  {
+    path: 'system',
+    loadComponent: () => import('./features/system/system.component').then(m => m.SystemComponent)
+  },
   { path: '**', redirectTo: '/dashboard' }
 ];

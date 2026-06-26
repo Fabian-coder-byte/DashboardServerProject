@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { SystemOverview } from '../models/system.model';
+import { SystemOverview, MetricSample, SystemSpecs, CpuInfo } from '../models/system.model';
 import { Container, ContainerDetail, DockerInfo } from '../models/docker.model';
 import { Service, ServiceHealth, ServiceActionResult, Alert, BlockDevice } from '../models/service.model';
 import { environment } from '../../../environments/environment';
@@ -13,6 +13,18 @@ export class ApiService {
 
   getSystemOverview(): Observable<SystemOverview> {
     return this.http.get<SystemOverview>(`${this.base}/system/overview`);
+  }
+
+  getSystemSpecs(): Observable<SystemSpecs> {
+    return this.http.get<SystemSpecs>(`${this.base}/system/specs`);
+  }
+
+  getSystemHistory(): Observable<MetricSample[]> {
+    return this.http.get<MetricSample[]>(`${this.base}/system/history`);
+  }
+
+  getSystemCpu(): Observable<CpuInfo> {
+    return this.http.get<CpuInfo>(`${this.base}/system/cpu`);
   }
 
   getContainers(): Observable<Container[]> {

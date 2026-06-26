@@ -97,6 +97,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 export class SidebarComponent {
   navItems = [
     { path: '/dashboard', label: 'Dashboard',  icon: 'grid-1x2-fill' },
+    { path: '/system',    label: 'Sistema',    icon: 'cpu-fill' },
     { path: '/docker',    label: 'Docker',     icon: 'box-seam-fill' },
     { path: '/services',  label: 'Servizi',    icon: 'layers-fill' },
     { path: '/storage',   label: 'Storage',    icon: 'hdd-fill' },

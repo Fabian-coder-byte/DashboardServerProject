@@ -8,6 +8,7 @@
     "build:prod": "ng build --configuration production"
   },
   "dependencies": {
+    "chart.js": "^4.4.0",
     "@angular/animations": "^18.2.0",
     "@angular/common": "^18.2.0",
     "@angular/compiler": "^18.2.0",
