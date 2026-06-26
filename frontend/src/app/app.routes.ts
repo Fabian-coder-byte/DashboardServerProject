@@ -19,6 +19,10 @@ export const routes: Routes = [
     loadComponent: () => import('./features/services/services.component').then(m => m.ServicesComponent)
   },
   {
+    path: 'services/:name',
+    loadComponent: () => import('./features/services/service-detail.component').then(m => m.ServiceDetailComponent)
+  },
+  {
     path: 'storage',
     loadComponent: () => import('./features/storage/storage.component').then(m => m.StorageComponent)
   },

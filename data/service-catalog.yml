@@ -17,6 +17,9 @@ services:
     healthcheck:
       type: http
       url: http://localhost:8096
+    # Integrazione Jellyfin: genera la API key da Jellyfin → Impostazioni → Chiavi API
+    api_type: jellyfin
+    api_key: "28079cd9f2a41d48c163a6088894492"  # ← inserisci qui la tua API key Jellyfin
 
   - name: Navidrome
     description: Server musicale personale, compatibile Subsonic/Airsonic

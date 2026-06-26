@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { SystemOverview, MetricSample, SystemSpecs, CpuInfo } from '../models/system.model';
 import { Container, ContainerDetail, DockerInfo } from '../models/docker.model';
-import { Service, ServiceHealth, ServiceActionResult, Alert, BlockDevice } from '../models/service.model';
+import { Service, ServiceHealth, ServiceActionResult, ServiceDetail, Alert, BlockDevice } from '../models/service.model';
 import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
@@ -74,6 +74,14 @@ export class ApiService {
     return this.http.post<{ success: boolean; message?: string; error?: string; hint?: string }>(
       `${this.base}/storage/remount`, { device }
     );
+  }
+
+  systemControl(action: 'reboot' | 'poweroff' | 'check-updates'): Observable<any> {
+    return this.http.post<any>(`${this.base}/system/control`, { action });
+  }
+
+  getServiceDetails(name: string): Observable<ServiceDetail> {
+    return this.http.get<ServiceDetail>(`${this.base}/services/${encodeURIComponent(name)}/details`);
   }
 
   getAlerts(): Observable<Alert[]> {

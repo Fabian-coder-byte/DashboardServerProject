@@ -30,6 +30,42 @@ interface ProcessStat {
       <p>Risorse hardware e andamento nel tempo — aggiornamento ogni 5 s</p>
     </div>
 
+    <!-- Controllo Raspberry Pi -->
+    <div class="card">
+      <div class="ctrl-title"><i class="bi bi-terminal-fill"></i> Controllo Raspberry Pi</div>
+      <div class="ctrl-row">
+        <button class="btn btn-warning" (click)="confirmControl('reboot')" [disabled]="ctrlLoading">
+          <i class="bi bi-arrow-clockwise"></i> Riavvia
+        </button>
+        <button class="btn btn-danger" (click)="confirmControl('poweroff')" [disabled]="ctrlLoading">
+          <i class="bi bi-power"></i> Spegni
+        </button>
+        <button class="btn btn-secondary" (click)="checkUpdates()" [disabled]="ctrlLoading || updatesLoading">
+          @if (updatesLoading) { <span class="spinner-xs"></span> } @else { <i class="bi bi-cloud-download"></i> }
+          Cerca aggiornamenti
+        </button>
+      </div>
+
+      @if (ctrlMessage) {
+        <div class="ctrl-msg" [class.ctrl-msg--err]="ctrlError">
+          <i [class]="'bi bi-' + (ctrlError ? 'x-circle-fill' : 'info-circle-fill')"></i> {{ ctrlMessage }}
+        </div>
+      }
+
+      @if (updateResult) {
+        @if (updateResult.count === 0) {
+          <div class="ctrl-msg ctrl-msg--ok"><i class="bi bi-check-circle-fill"></i> Sistema aggiornato — nessun pacchetto da installare.</div>
+        } @else {
+          <div class="ctrl-msg ctrl-msg--warn" style="flex-direction:column;align-items:flex-start;gap:10px">
+            <span><i class="bi bi-exclamation-triangle-fill"></i> {{ updateResult.count }} aggiornamenti disponibili</span>
+            <div class="pkg-list">
+              @for (pkg of updateResult.updates; track pkg) { <span class="pkg-badge">{{ pkg }}</span> }
+            </div>
+          </div>
+        }
+      }
+    </div>
+
     <!-- Specifiche hardware -->
     @if (specs) {
       <div class="card specs-card">
@@ -233,6 +269,31 @@ interface ProcessStat {
     </div><!-- /page -->
   `,
   styles: [`
+    /* ── Controllo Raspberry ───────────────────────────────────── */
+    .ctrl-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+    .ctrl-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .ctrl-msg {
+      display: flex; align-items: center; gap: 8px;
+      margin-top: 14px; padding: 10px 14px; border-radius: 8px; font-size: 13px;
+      background: rgba(59,130,246,.1); color: var(--accent-blue); border: 1px solid rgba(59,130,246,.2);
+    }
+    .ctrl-msg--ok   { background: rgba(34,197,94,.1);  color: #22c55e;  border-color: rgba(34,197,94,.2); }
+    .ctrl-msg--warn { background: rgba(245,158,11,.1); color: #f59e0b; border-color: rgba(245,158,11,.2); }
+    .ctrl-msg--err  { background: rgba(239,68,68,.1);  color: #ef4444; border-color: rgba(239,68,68,.2); }
+    .pkg-list { display: flex; flex-wrap: wrap; gap: 6px; }
+    .pkg-badge { background: var(--bg-hover); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 4px; padding: 2px 8px; font-size: 11px; font-family: monospace; }
+    .btn-warning { background: #e0a900; color: #000; border: none; }
+    .btn-warning:hover:not(:disabled) { background: #c69500; }
+    .btn-danger  { background: #dc3545; color: #fff; border: none; }
+    .btn-danger:hover:not(:disabled)  { background: #b02a37; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    .spinner-xs {
+      display: inline-block; width: 10px; height: 10px;
+      border: 2px solid currentColor; border-right-color: transparent;
+      border-radius: 50%; animation: spin .6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
     /* ── Specs ─────────────────────────────────────────────────── */
     .specs-title {
       font-size: 13px; font-weight: 600; color: var(--text-secondary);
@@ -328,6 +389,12 @@ export class SystemComponent implements OnInit, AfterViewInit, OnDestroy {
   containersByCpu: ContainerStat[] = [];
   topProcesses: ProcessStat[] = [];
 
+  ctrlLoading = false;
+  updatesLoading = false;
+  ctrlMessage: string | null = null;
+  ctrlError = false;
+  updateResult: { count: number; updates: string[] } | null = null;
+
   current = { cpu: 0, ram: 0, temp: null as number | null, netRx: 0, netTx: 0 };
   private totalRam = 0;
 
@@ -360,6 +427,37 @@ export class SystemComponent implements OnInit, AfterViewInit, OnDestroy {
   private pollTimer?: ReturnType<typeof setInterval>;
 
   // ── Public helpers ───────────────────────────────────────────────
+
+  confirmControl(action: 'reboot' | 'poweroff'): void {
+    const labels  = { reboot: 'riavviare', poweroff: 'spegnere' };
+    const details = {
+      reboot:   'Il server sarà irraggiungibile per circa 30-60 secondi.',
+      poweroff: 'Il server si spegnerà completamente. Dovrai riaccenderlo fisicamente.'
+    };
+    if (!window.confirm(`⚠️ Sei sicuro di voler ${labels[action]} il Raspberry Pi?\n\n${details[action]}`)) return;
+
+    this.ctrlLoading = true;
+    this.ctrlMessage = null;
+    this.ctrlError   = false;
+    this.updateResult = null;
+
+    this.api.systemControl(action).subscribe({
+      next: (res) => { this.ctrlLoading = false; this.ctrlMessage = res.message; this.ctrlError = false; },
+      error: (err) => { this.ctrlLoading = false; this.ctrlMessage = err.error?.error ?? 'Errore durante l\'operazione'; this.ctrlError = true; }
+    });
+  }
+
+  checkUpdates(): void {
+    this.updatesLoading = true;
+    this.updateResult   = null;
+    this.ctrlMessage    = null;
+    this.ctrlError      = false;
+
+    this.api.systemControl('check-updates').subscribe({
+      next: (res) => { this.updatesLoading = false; this.updateResult = res; },
+      error: (err) => { this.updatesLoading = false; this.ctrlMessage = err.error?.error ?? 'Errore nel controllo aggiornamenti'; this.ctrlError = true; }
+    });
+  }
 
   valueClass(val: number, warn: number, danger: number): string {
     if (val >= danger) return 'danger';

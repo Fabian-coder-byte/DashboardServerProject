@@ -102,6 +102,122 @@ router.post('/:name/compose', async (req, res) => {
   }
 });
 
+// Ricava l'URL base (protocollo://host:porta) del servizio raggiungibile dall'interno del container
+function getServiceBaseUrl(service) {
+  const raw = service.healthcheck?.url || `http://localhost:${service.port}`;
+  const resolved = resolveHealthUrl(raw);
+  try {
+    const u = new URL(resolved);
+    return `${u.protocol}//${u.host}`;
+  } catch {
+    return resolved;
+  }
+}
+
+// GET /api/services/:name/details
+router.get('/:name/details', async (req, res) => {
+  const service = loadCatalog().find(s => s.name.toLowerCase() === req.params.name.toLowerCase());
+  if (!service) return res.status(404).json({ error: `Servizio "${req.params.name}" non trovato` });
+
+  // 1. Health check
+  let health = { name: service.name, status: 'unknown', responseTime: null };
+  if (service.healthcheck?.url) {
+    const url = resolveHealthUrl(service.healthcheck.url);
+    const start = Date.now();
+    try {
+      await axios.get(url, { timeout: 3000 });
+      health = { name: service.name, status: 'online', responseTime: Date.now() - start };
+    } catch {
+      health = { name: service.name, status: 'offline', responseTime: null };
+    }
+  }
+
+  // 2. Container Docker del progetto Compose collegato
+  let containers = [];
+  const project = service.compose_project
+    || (service.compose_path ? path.basename(path.dirname(service.compose_path)) : null);
+
+  if (project) {
+    try {
+      const list = await docker.listContainers({
+        all: true,
+        filters: JSON.stringify({ label: [`com.docker.compose.project=${project}`] })
+      });
+      containers = list.map(c => ({
+        id: c.Id.slice(0, 12),
+        name: (c.Names[0] || '').replace('/', ''),
+        image: c.Image,
+        status: c.State,
+        statusText: c.Status,
+        ports: (c.Ports || []).filter(p => p.PublicPort).map(p => `${p.PublicPort}:${p.PrivatePort}`)
+      }));
+    } catch (err) {
+      console.error('[services/details] Docker:', err.message);
+    }
+  }
+
+  // 3. Integrazione specifica per tipo servizio (es. Jellyfin)
+  let integration = null;
+
+  if (service.api_type === 'jellyfin') {
+    if (!service.api_key) {
+      integration = {
+        type: 'jellyfin',
+        error: 'api_key non configurata. Aggiungila nel service-catalog.yml per abilitare l\'integrazione Jellyfin.'
+      };
+    } else {
+      const baseUrl = getServiceBaseUrl(service);
+      const headers = {
+        'Authorization': `MediaBrowser Token="${service.api_key}", Client="PiControl", Device="Server", DeviceId="picontrol", Version="1.0"`
+      };
+
+      const [countsR, usersR, sessionsR, moviesR, seriesR] = await Promise.allSettled([
+        axios.get(`${baseUrl}/Items/Counts`, { headers, timeout: 5000 }),
+        axios.get(`${baseUrl}/Users`, { headers, timeout: 5000 }),
+        axios.get(`${baseUrl}/Sessions`, { headers, timeout: 5000 }),
+        axios.get(`${baseUrl}/Items?Recursive=true&IncludeItemTypes=Movie&SortBy=DateCreated&SortOrder=Descending&Limit=10&Fields=ProductionYear,RunTimeTicks,Overview`, { headers, timeout: 5000 }),
+        axios.get(`${baseUrl}/Items?Recursive=true&IncludeItemTypes=Series&SortBy=DateCreated&SortOrder=Descending&Limit=10&Fields=ProductionYear,Overview`, { headers, timeout: 5000 })
+      ]);
+
+      integration = {
+        type: 'jellyfin',
+        counts: countsR.status === 'fulfilled' ? countsR.value.data : null,
+        users: usersR.status === 'fulfilled'
+          ? usersR.value.data.map(u => ({
+              name: u.Name,
+              isAdmin: u.Policy?.IsAdministrator ?? false,
+              lastActivity: u.LastActivityDate ?? null
+            }))
+          : [],
+        activeSessions: sessionsR.status === 'fulfilled'
+          ? sessionsR.value.data.filter(s => s.UserId).length : 0,
+        sessions: sessionsR.status === 'fulfilled'
+          ? sessionsR.value.data
+              .filter(s => s.UserId)
+              .map(s => ({ userName: s.UserName || '?', client: s.Client || 'N/D', nowPlaying: s.NowPlayingItem?.Name ?? null }))
+          : [],
+        recentMovies: moviesR.status === 'fulfilled'
+          ? (moviesR.value.data.Items || []).map(item => ({
+              name: item.Name,
+              year: item.ProductionYear ?? null,
+              durationMin: item.RunTimeTicks ? Math.round(item.RunTimeTicks / 600000000) : null,
+              overview: item.Overview ? item.Overview.slice(0, 180) : null
+            }))
+          : [],
+        recentSeries: seriesR.status === 'fulfilled'
+          ? (seriesR.value.data.Items || []).map(item => ({
+              name: item.Name,
+              year: item.ProductionYear ?? null,
+              overview: item.Overview ? item.Overview.slice(0, 180) : null
+            }))
+          : []
+      };
+    }
+  }
+
+  res.json({ service, health, containers, integration });
+});
+
 // GET /api/services/:name/health
 router.get('/:name/health', async (req, res) => {
   const service = loadCatalog().find(s => s.name.toLowerCase() === req.params.name.toLowerCase());

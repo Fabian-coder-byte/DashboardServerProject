@@ -1,5 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { ApiService } from '../../core/services/api.service';
 import { Service, ServiceHealth } from '../../core/models/service.model';
@@ -13,7 +14,7 @@ interface ActionFeedback {
 @Component({
   selector: 'app-services',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   template: `
     <div class="page">
     <div class="page-header">
@@ -57,6 +58,9 @@ interface ActionFeedback {
             }
 
             <div style="display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap">
+              <a [routerLink]="['/services', svc.name]" class="btn btn-secondary btn-sm">
+                <i class="bi bi-info-circle"></i> Dettagli
+              </a>
               @if (svc.url_local) {
                 <a [href]="svc.url_local" target="_blank" class="btn btn-primary btn-sm">
                   <i class="bi bi-box-arrow-up-right"></i> Apri LAN

@@ -12,6 +12,43 @@ export interface Service {
   healthcheck?: { type: string; url: string; };
   compose_path?: string;
   compose_project?: string;
+  volumes?: string[];
+  api_type?: string;
+}
+
+export interface ServiceContainer {
+  id: string;
+  name: string;
+  image: string;
+  status: string;
+  statusText: string;
+  ports: string[];
+}
+
+export interface JellyfinIntegration {
+  type: 'jellyfin';
+  error?: string;
+  counts?: {
+    MovieCount: number;
+    SeriesCount: number;
+    EpisodeCount: number;
+    SongCount: number;
+    AlbumCount: number;
+    BookCount: number;
+    ItemCount: number;
+  };
+  users: Array<{ name: string; isAdmin: boolean; lastActivity: string | null; }>;
+  activeSessions: number;
+  sessions: Array<{ userName: string; client: string; nowPlaying: string | null; }>;
+  recentMovies: Array<{ name: string; year: number | null; durationMin: number | null; overview: string | null; }>;
+  recentSeries: Array<{ name: string; year: number | null; overview: string | null; }>;
+}
+
+export interface ServiceDetail {
+  service: Service;
+  health: ServiceHealth;
+  containers: ServiceContainer[];
+  integration: JellyfinIntegration | null;
 }
 
 export interface ServiceActionResult {

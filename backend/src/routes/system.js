@@ -1,6 +1,9 @@
 const express = require('express');
 const si = require('systeminformation');
 const fs = require('fs');
+const { exec } = require('child_process');
+const { promisify } = require('util');
+const execAsync = promisify(exec);
 const router = express.Router();
 
 // ── Lettura info OS dall'host (montato come /host/os-release) ────────────────
@@ -188,6 +191,47 @@ router.get('/specs', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// POST /api/system/control  { action: 'reboot' | 'poweroff' | 'check-updates' }
+// Richiede container privileged con accesso a /proc/1/ns/mnt (già configurato in docker-compose.yml)
+router.post('/control', async (req, res) => {
+  const { action } = req.body;
+
+  if (action === 'check-updates') {
+    try {
+      // apt-get update può impiegare 30-90 s — ignoriamo errori (lock, rete) e proviamo comunque
+      await execAsync('nsenter -t 1 -m -- apt-get update -qq 2>&1', { timeout: 90000 }).catch(() => {});
+      const { stdout } = await execAsync('nsenter -t 1 -m -- apt list --upgradable 2>/dev/null', { timeout: 30000 });
+      const updates = stdout
+        .split('\n')
+        .filter(l => l.includes('/') && !l.startsWith('Listing') && !l.startsWith('WARNING'))
+        .map(l => l.split('/')[0].trim())
+        .filter(Boolean);
+      return res.json({ updates, count: updates.length });
+    } catch (err) {
+      return res.status(500).json({ error: `Errore nel controllo aggiornamenti: ${err.message}` });
+    }
+  }
+
+  if (action === 'reboot' || action === 'poweroff') {
+    // Risposta inviata subito — poi eseguiamo il comando, altrimenti la risposta non raggiunge il client
+    res.json({
+      success: true,
+      message: action === 'reboot'
+        ? 'Riavvio del sistema in corso... La dashboard tornerà disponibile tra 30-60 secondi.'
+        : 'Spegnimento del sistema in corso. Riaccendi il Raspberry Pi fisicamente per riavviarlo.'
+    });
+    const cmd = action === 'reboot'
+      ? 'nsenter -t 1 -m -- systemctl reboot'
+      : 'nsenter -t 1 -m -- systemctl poweroff';
+    setTimeout(() => {
+      execAsync(cmd).catch(err => console.error(`[system/control] ${action}:`, err.message));
+    }, 800);
+    return;
+  }
+
+  res.status(400).json({ error: 'Azione non valida. Usa: reboot, poweroff, check-updates' });
 });
 
 module.exports = router;
