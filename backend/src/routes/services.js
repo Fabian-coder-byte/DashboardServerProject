@@ -43,7 +43,9 @@ router.get('/health', async (req, res) => {
     const url = resolveHealthUrl(svc.healthcheck.url);
     const start = Date.now();
     try {
-      await axios.get(url, { timeout: 3000 });
+      // validateStatus: () => true → qualsiasi risposta HTTP (200, 302, 401...) = online
+      // Solo errori di rete o timeout contano come offline
+      await axios.get(url, { timeout: 3000, maxRedirects: 5, validateStatus: () => true });
       return { name: svc.name, status: 'online', responseTime: Date.now() - start };
     } catch (err) {
       log.warn('services', `health check fallito: ${svc.name} (${url})`, err.message);
@@ -127,7 +129,7 @@ router.get('/:name/details', async (req, res) => {
     const url = resolveHealthUrl(service.healthcheck.url);
     const start = Date.now();
     try {
-      await axios.get(url, { timeout: 3000 });
+      await axios.get(url, { timeout: 3000, maxRedirects: 5, validateStatus: () => true });
       health = { name: service.name, status: 'online', responseTime: Date.now() - start };
     } catch {
       health = { name: service.name, status: 'offline', responseTime: null };
@@ -229,7 +231,7 @@ router.get('/:name/health', async (req, res) => {
   const url = resolveHealthUrl(service.healthcheck.url);
   const start = Date.now();
   try {
-    await axios.get(url, { timeout: 3000 });
+    await axios.get(url, { timeout: 3000, maxRedirects: 5, validateStatus: () => true });
     res.json({ name: service.name, status: 'online', responseTime: Date.now() - start });
   } catch {
     res.json({ name: service.name, status: 'offline', responseTime: null });
