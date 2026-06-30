@@ -31,6 +31,18 @@ export class ApiService {
     return this.http.get<any>(`${this.base}/system/processes`);
   }
 
+  getSystemMemory(): Observable<any> {
+    return this.http.get<any>(`${this.base}/system/memory`);
+  }
+
+  getSystemHealth(): Observable<any> {
+    return this.http.get<any>(`${this.base}/system/health`);
+  }
+
+  getSystemJournal(limit = 30): Observable<{ rebootRequired: boolean; errors: any[]; source: string }> {
+    return this.http.get<any>(`${this.base}/system/journal?limit=${limit}`);
+  }
+
   getContainers(): Observable<Container[]> {
     return this.http.get<Container[]>(`${this.base}/docker/containers`);
   }
@@ -94,6 +106,22 @@ export class ApiService {
 
   getNetworkInfo(): Observable<NetworkInfo> {
     return this.http.get<NetworkInfo>(`${this.base}/network`);
+  }
+
+  getNetworkPing(): Observable<any> {
+    return this.http.get<any>(`${this.base}/network/ping`);
+  }
+
+  getNetworkPorts(): Observable<any> {
+    return this.http.get<any>(`${this.base}/network/ports`);
+  }
+
+  getDockerErrors(): Observable<any> {
+    return this.http.get<any>(`${this.base}/docker/errors`);
+  }
+
+  getStorageSmart(): Observable<any> {
+    return this.http.get<any>(`${this.base}/storage/smart`);
   }
 
   getBackupStatus(): Observable<BackupData> {

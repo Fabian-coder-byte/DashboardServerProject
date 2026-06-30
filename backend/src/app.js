@@ -32,7 +32,7 @@ app.use('/api/storage', require('./routes/storage'));
 app.use('/api/logs', require('./routes/logs'));
 app.use('/api/alerts', require('./routes/alerts'));
 app.use('/api/network', require('./routes/network'));
-app.use('/api/backup', require('./routes/backup'));
+app.use('/api/backup',  require('./routes/backup'));
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
