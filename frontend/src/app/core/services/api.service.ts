@@ -55,7 +55,7 @@ export class ApiService {
     return this.http.get<ServiceHealth>(`${this.base}/services/${encodeURIComponent(name)}/health`);
   }
 
-  serviceAction(name: string, action: 'start' | 'stop' | 'restart'): Observable<ServiceActionResult> {
+  serviceAction(name: string, action: 'start' | 'stop' | 'restart' | 'pause' | 'unpause'): Observable<ServiceActionResult> {
     return this.http.post<ServiceActionResult>(
       `${this.base}/services/${encodeURIComponent(name)}/compose`,
       { action }

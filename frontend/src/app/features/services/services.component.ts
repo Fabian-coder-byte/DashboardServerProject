@@ -26,17 +26,39 @@ interface ActionFeedback {
     @if (error)   { <div class="error-msg"><i class="bi bi-exclamation-triangle-fill"></i> {{ error }}</div> }
 
     @if (!loading && !error) {
-      <!-- Toolbar: filtri categoria + toggle vista -->
+      <!-- Toolbar: filtri categoria + stato + toggle vista -->
       <div class="toolbar">
-        <div class="filter-pills">
-          <button class="pill" [class.active]="!selectedCategory" (click)="setCategory(null)">
-            Tutti <span class="pill-count">{{ services.length }}</span>
-          </button>
-          @for (cat of categories; track cat) {
-            <button class="pill" [class.active]="selectedCategory === cat" (click)="setCategory(cat)">
-              {{ cat }} <span class="pill-count">{{ countByCategory(cat) }}</span>
+        <div class="filter-group">
+          <div class="filter-pills">
+            <button class="pill" [class.active]="!selectedCategory" (click)="setCategory(null)">
+              Tutti <span class="pill-count">{{ services.length }}</span>
             </button>
-          }
+            @for (cat of categories; track cat) {
+              <button class="pill" [class.active]="selectedCategory === cat" (click)="setCategory(cat)">
+                {{ cat }} <span class="pill-count">{{ countByCategory(cat) }}</span>
+              </button>
+            }
+          </div>
+          <div class="filter-divider"></div>
+          <div class="status-pills">
+            <button class="pill pill-status"
+                    [class.active]="selectedStatus === 'all'"
+                    (click)="setStatus('all')">
+              <i class="bi bi-circle"></i> Tutti
+            </button>
+            <button class="pill pill-status pill-online"
+                    [class.active]="selectedStatus === 'online'"
+                    (click)="setStatus('online')">
+              <i class="bi bi-circle-fill"></i> Online
+              <span class="pill-count">{{ online }}</span>
+            </button>
+            <button class="pill pill-status pill-offline"
+                    [class.active]="selectedStatus === 'offline'"
+                    (click)="setStatus('offline')">
+              <i class="bi bi-circle-fill"></i> Offline
+              <span class="pill-count">{{ offline }}</span>
+            </button>
+          </div>
         </div>
         <div class="view-toggle">
           <button class="view-btn" [class.active]="viewMode === 'card'" (click)="viewMode = 'card'" title="Vista card">
@@ -96,18 +118,30 @@ interface ActionFeedback {
 
                 @if (hasComposeControl(svc)) {
                   <div class="compose-actions">
-                    @if (healthStatus(svc.name) !== 'online') {
+                    @if (healthStatus(svc.name) !== 'online' && !isContainerPaused(svc.name)) {
                       <button class="btn btn-success btn-sm"
                               [disabled]="isBusy(svc.name)"
                               (click)="runAction(svc, 'start')">
                         <i class="bi bi-play-fill"></i> Avvia
                       </button>
                     }
-                    @if (healthStatus(svc.name) === 'online') {
+                    @if (isContainerPaused(svc.name)) {
+                      <button class="btn btn-success btn-sm"
+                              [disabled]="isBusy(svc.name)"
+                              (click)="runAction(svc, 'unpause')">
+                        <i class="bi bi-play-circle-fill"></i> Riprendi
+                      </button>
+                    }
+                    @if (healthStatus(svc.name) === 'online' && !isContainerPaused(svc.name)) {
                       <button class="btn btn-warning btn-sm"
                               [disabled]="isBusy(svc.name)"
                               (click)="runAction(svc, 'restart')">
                         <i class="bi bi-arrow-clockwise"></i> Riavvia
+                      </button>
+                      <button class="btn btn-pause btn-sm"
+                              [disabled]="isBusy(svc.name)"
+                              (click)="runAction(svc, 'pause')">
+                        <i class="bi bi-pause-fill"></i> Pausa
                       </button>
                       <button class="btn btn-danger btn-sm"
                               [disabled]="isBusy(svc.name)"
@@ -167,18 +201,28 @@ interface ActionFeedback {
                           <i class="bi bi-box-arrow-up-right"></i> LAN
                         </a>
                       }
-                      @if (hasComposeControl(svc) && healthStatus(svc.name) !== 'online') {
+                      @if (hasComposeControl(svc) && healthStatus(svc.name) !== 'online' && !isContainerPaused(svc.name)) {
                         <button class="btn btn-success btn-sm" title="Avvia"
                                 [disabled]="isBusy(svc.name)" (click)="runAction(svc, 'start')">
                           <i class="bi bi-play-fill"></i>
                         </button>
                       }
-                      @if (hasComposeControl(svc) && healthStatus(svc.name) === 'online') {
+                      @if (hasComposeControl(svc) && isContainerPaused(svc.name)) {
+                        <button class="btn btn-success btn-sm" title="Riprendi"
+                                [disabled]="isBusy(svc.name)" (click)="runAction(svc, 'unpause')">
+                          <i class="bi bi-play-circle-fill"></i>
+                        </button>
+                      }
+                      @if (hasComposeControl(svc) && healthStatus(svc.name) === 'online' && !isContainerPaused(svc.name)) {
                         <button class="btn btn-warning btn-sm" title="Riavvia"
                                 [disabled]="isBusy(svc.name)" (click)="runAction(svc, 'restart')">
                           <i class="bi bi-arrow-clockwise"></i>
                         </button>
-                        <button class="btn btn-danger btn-sm" title="Ferma"
+                        <button class="btn btn-pause btn-sm" title="Metti in pausa (congela)"
+                                [disabled]="isBusy(svc.name)" (click)="runAction(svc, 'pause')">
+                          <i class="bi bi-pause-fill"></i>
+                        </button>
+                        <button class="btn btn-danger btn-sm" title="Ferma completamente"
                                 [disabled]="isBusy(svc.name)" (click)="runAction(svc, 'stop')">
                           <i class="bi bi-stop-fill"></i>
                         </button>
@@ -193,7 +237,9 @@ interface ActionFeedback {
       }
 
       @if (filteredServices.length === 0 && services.length > 0) {
-        <div class="empty-msg">Nessun servizio nella categoria selezionata.</div>
+        <div class="empty-msg">
+          Nessun servizio corrisponde ai filtri selezionati.
+        </div>
       }
       @if (services.length === 0) {
         <div class="empty-msg">
@@ -208,16 +254,34 @@ interface ActionFeedback {
     .toolbar {
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: flex-start;
       margin-bottom: 20px;
       gap: 12px;
       flex-wrap: wrap;
+    }
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
     .filter-pills {
       display: flex;
       gap: 6px;
       flex-wrap: wrap;
     }
+    .filter-divider {
+      display: none; /* separator usato solo se pills inline */
+    }
+    .status-pills {
+      display: flex;
+      gap: 6px;
+    }
+    .pill-online { color: #75b798; }
+    .pill-online.active { background: #198754; border-color: #198754; color: #fff; }
+    .pill-offline { color: #ea868f; }
+    .pill-offline.active { background: #dc3545; border-color: #dc3545; color: #fff; }
+    .pill-status { font-size: 12px; padding: 4px 11px; }
+    .pill-status i { font-size: 9px; }
     .pill {
       background: var(--bg-hover);
       border: 1px solid var(--border);
@@ -318,6 +382,8 @@ interface ActionFeedback {
     .btn-warning:hover:not(:disabled)  { background: #c69500; }
     .btn-danger   { background: #dc3545; color: #fff; border: none; }
     .btn-danger:hover:not(:disabled)   { background: #b02a37; }
+    .btn-pause    { background: #0d6efd; color: #fff; border: none; }
+    .btn-pause:hover:not(:disabled)    { background: #0b5ed7; }
     button:disabled { opacity: .5; cursor: not-allowed; }
 
     .action-feedback {
@@ -355,8 +421,10 @@ export class ServicesComponent implements OnInit {
 
   viewMode: 'card' | 'table' = 'card';
   selectedCategory: string | null = null;
+  selectedStatus: 'all' | 'online' | 'offline' = 'all';
 
   private busySet   = new Set<string>();
+  private pausedSet = new Set<string>();
   private feedbacks = new Map<string, ActionFeedback>();
 
   categoryColor = categoryColor;
@@ -370,8 +438,11 @@ export class ServicesComponent implements OnInit {
   }
 
   get filteredServices(): Service[] {
-    if (!this.selectedCategory) return this.services;
-    return this.services.filter(s => s.category === this.selectedCategory);
+    return this.services.filter(s => {
+      if (this.selectedCategory && s.category !== this.selectedCategory) return false;
+      if (this.selectedStatus !== 'all' && this.healthStatus(s.name) !== this.selectedStatus) return false;
+      return true;
+    });
   }
 
   countByCategory(cat: string): number {
@@ -380,6 +451,14 @@ export class ServicesComponent implements OnInit {
 
   setCategory(cat: string | null): void {
     this.selectedCategory = cat;
+  }
+
+  setStatus(status: 'all' | 'online' | 'offline'): void {
+    this.selectedStatus = status;
+  }
+
+  isContainerPaused(name: string): boolean {
+    return this.pausedSet.has(name);
   }
 
   healthStatus(name: string): string {
@@ -405,13 +484,16 @@ export class ServicesComponent implements OnInit {
     return svc.type === 'docker' && !!(svc.compose_path || svc.compose_project);
   }
 
-  runAction(svc: Service, action: 'start' | 'stop' | 'restart'): void {
-    const actionLabel = { start: 'avviare', stop: 'fermare', restart: 'riavviare' }[action];
+  runAction(svc: Service, action: 'start' | 'stop' | 'restart' | 'pause' | 'unpause'): void {
+    const actionLabel: Record<string, string> = {
+      start: 'avviare', stop: 'fermare completamente', restart: 'riavviare',
+      pause: 'mettere in pausa', unpause: 'riprendere'
+    };
     const needsConfirm = (action === 'stop' || action === 'restart') && svc.criticality === 'high';
 
     if (needsConfirm) {
       const ok = window.confirm(
-        `Sei sicuro di voler ${actionLabel} "${svc.name}"?\n\nQuesto servizio è marcato come CRITICITÀ ALTA.`
+        `Sei sicuro di voler ${actionLabel[action]} "${svc.name}"?\n\nQuesto servizio è marcato come CRITICITÀ ALTA.`
       );
       if (!ok) return;
     }
@@ -422,11 +504,20 @@ export class ServicesComponent implements OnInit {
     this.api.serviceAction(svc.name, action).subscribe({
       next: (result) => {
         this.busySet.delete(svc.name);
+        if (action === 'pause')   this.pausedSet.add(svc.name);
+        if (action === 'unpause') this.pausedSet.delete(svc.name);
+        if (action === 'start')   this.pausedSet.delete(svc.name);
+        if (action === 'stop')    this.pausedSet.delete(svc.name);
+
+        const verbMap: Record<string, string> = {
+          start: 'avviati', stop: 'fermati', restart: 'riavviati',
+          pause: 'messi in pausa', unpause: 'ripresi'
+        };
         const msg = result.failed.length === 0
-          ? `${result.succeeded.length} container ${action === 'start' ? 'avviati' : action === 'stop' ? 'fermati' : 'riavviati'} correttamente`
+          ? `${result.succeeded.length} container ${verbMap[action]} correttamente`
           : `Completato con ${result.failed.length} errori`;
         this.setFeedback(svc.name, result.failed.length === 0 ? 'success' : 'error', msg);
-        this.refreshHealth(svc.name);
+        if (action !== 'pause') this.refreshHealth(svc.name);
       },
       error: (err) => {
         this.busySet.delete(svc.name);
