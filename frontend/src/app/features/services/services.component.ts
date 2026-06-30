@@ -60,13 +60,30 @@ interface ActionFeedback {
             </button>
           </div>
         </div>
-        <div class="view-toggle">
-          <button class="view-btn" [class.active]="viewMode === 'card'" (click)="viewMode = 'card'" title="Vista card">
-            <i class="bi bi-grid-3x3-gap-fill"></i>
-          </button>
-          <button class="view-btn" [class.active]="viewMode === 'table'" (click)="viewMode = 'table'" title="Vista tabella">
-            <i class="bi bi-table"></i>
-          </button>
+        <div class="right-controls">
+          <div class="search-box">
+            <i class="bi bi-search search-icon"></i>
+            <input
+              type="text"
+              class="search-input"
+              placeholder="Cerca servizio..."
+              [value]="searchQuery"
+              (input)="searchQuery = $any($event.target).value"
+            />
+            @if (searchQuery) {
+              <button class="search-clear" (click)="searchQuery = ''" title="Cancella">
+                <i class="bi bi-x"></i>
+              </button>
+            }
+          </div>
+          <div class="view-toggle">
+            <button class="view-btn" [class.active]="viewMode === 'card'" (click)="viewMode = 'card'" title="Vista card">
+              <i class="bi bi-grid-3x3-gap-fill"></i>
+            </button>
+            <button class="view-btn" [class.active]="viewMode === 'table'" (click)="viewMode = 'table'" title="Vista tabella">
+              <i class="bi bi-table"></i>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -305,6 +322,56 @@ interface ActionFeedback {
     }
     .pill.active .pill-count { background: rgba(255,255,255,.3); }
 
+    /* ── right controls (search + view toggle) ── */
+    .right-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .search-box {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .search-icon {
+      position: absolute;
+      left: 10px;
+      color: var(--text-muted);
+      font-size: 13px;
+      pointer-events: none;
+    }
+    .search-input {
+      background: var(--bg-hover);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 6px 32px 6px 30px;
+      font-size: 13px;
+      width: 200px;
+      outline: none;
+      transition: border-color .15s, width .2s;
+    }
+    .search-input::placeholder { color: var(--text-muted); }
+    .search-input:focus {
+      border-color: var(--accent-blue);
+      width: 240px;
+    }
+    .search-clear {
+      position: absolute;
+      right: 8px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 0;
+      font-size: 15px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+    }
+    .search-clear:hover { color: var(--text); }
+
     /* ── view toggle ── */
     .view-toggle { display: flex; gap: 4px; }
     .view-btn {
@@ -422,6 +489,7 @@ export class ServicesComponent implements OnInit {
   viewMode: 'card' | 'table' = 'card';
   selectedCategory: string | null = null;
   selectedStatus: 'all' | 'online' | 'offline' = 'all';
+  searchQuery = '';
 
   private busySet   = new Set<string>();
   private pausedSet = new Set<string>();
@@ -438,9 +506,11 @@ export class ServicesComponent implements OnInit {
   }
 
   get filteredServices(): Service[] {
+    const q = this.searchQuery.toLowerCase().trim();
     return this.services.filter(s => {
       if (this.selectedCategory && s.category !== this.selectedCategory) return false;
       if (this.selectedStatus !== 'all' && this.healthStatus(s.name) !== this.selectedStatus) return false;
+      if (q && !s.name.toLowerCase().includes(q) && !s.description?.toLowerCase().includes(q)) return false;
       return true;
     });
   }
