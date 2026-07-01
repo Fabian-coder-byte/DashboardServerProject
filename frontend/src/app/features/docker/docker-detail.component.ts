@@ -124,6 +124,7 @@ import { formatBytes } from '../../core/utils/format.utils';
           @if (detail.ports.length === 0) {
             <div class="empty-msg" style="padding: 20px 0">Nessuna porta esposta</div>
           } @else {
+            <div class="table-responsive">
             <table class="table mt-8">
               <thead>
                 <tr><th>Container</th><th>Host IP</th><th>Host Port</th></tr>
@@ -138,6 +139,7 @@ import { formatBytes } from '../../core/utils/format.utils';
                 }
               </tbody>
             </table>
+            </div>
           }
         </div>
       </div>
@@ -148,6 +150,7 @@ import { formatBytes } from '../../core/utils/format.utils';
         @if (detail.mounts.length === 0) {
           <div class="empty-msg" style="padding: 20px 0">Nessun volume montato</div>
         } @else {
+          <div class="table-responsive">
           <table class="table mt-8">
             <thead>
               <tr><th>Tipo</th><th>Host (sorgente)</th><th>Container (destinazione)</th><th>Modalità</th></tr>
@@ -163,6 +166,7 @@ import { formatBytes } from '../../core/utils/format.utils';
               }
             </tbody>
           </table>
+          </div>
         }
       </div>
 
@@ -177,6 +181,7 @@ import { formatBytes } from '../../core/utils/format.utils';
         </div>
 
         @if (showEnv) {
+          <div class="table-responsive">
           <table class="table mt-8">
             <thead>
               <tr><th>Chiave</th><th>Valore</th></tr>
@@ -193,6 +198,7 @@ import { formatBytes } from '../../core/utils/format.utils';
               }
             </tbody>
           </table>
+          </div>
         }
       </div>
     }

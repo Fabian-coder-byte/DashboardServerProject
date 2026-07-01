@@ -186,6 +186,20 @@ a { color: var(--accent-blue); text-decoration: none; }
 }
 
 /* ── Table ──────────────────────────────────────────────────────── */
+/* Wrap any <table> in .table-responsive so wide tables scroll horizontally
+   instead of being clipped by .layout__content's overflow-x: hidden. */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table,
+.info-table,
+.svc-table {
+  min-width: 560px;
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -199,6 +213,7 @@ a { color: var(--accent-blue); text-decoration: none; }
     text-transform: uppercase;
     letter-spacing: 0.5px;
     border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
   }
 
   td {
@@ -209,6 +224,10 @@ a { color: var(--accent-blue); text-decoration: none; }
 
   tr:hover td { background: var(--bg-hover); }
   tr:last-child td { border-bottom: none; }
+}
+
+@media (max-width: 640px) {
+  .table th, .table td { padding: 8px 10px; font-size: 12px; }
 }
 
 /* ── Buttons ────────────────────────────────────────────────────── */

@@ -194,6 +194,7 @@ import { formatBytes, formatUptime, progressClass } from '../../core/utils/forma
         @if (containers.length === 0) {
           <div class="empty-msg">Nessun container trovato</div>
         } @else {
+          <div class="table-responsive">
           <table class="table mt-12">
             <thead>
               <tr><th>Nome</th><th>Stato</th><th>Porte</th><th>CPU</th><th>RAM</th><th></th></tr>
@@ -222,6 +223,7 @@ import { formatBytes, formatUptime, progressClass } from '../../core/utils/forma
               }
             </tbody>
           </table>
+          </div>
         }
       </div>
 

@@ -81,6 +81,7 @@ import { formatBytes } from '../../core/utils/format.utils';
       @if (network.interfaces.length > 0) {
         <div class="card">
           <div class="card__title"><i class="bi bi-hdd-network"></i> Interfacce host</div>
+          <div class="table-responsive">
           <table class="table mt-12">
             <thead>
               <tr><th>Interfaccia</th><th>IPv4</th><th>Stato</th></tr>
@@ -102,6 +103,7 @@ import { formatBytes } from '../../core/utils/format.utils';
               }
             </tbody>
           </table>
+          </div>
         </div>
       } @else {
         <div class="card">

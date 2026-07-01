@@ -54,6 +54,7 @@ import { formatBytes } from '../../core/utils/format.utils';
         @if (filtered.length === 0) {
           <div class="empty-msg">Nessun container trovato</div>
         } @else {
+          <div class="table-responsive">
           <table class="table">
             <thead>
               <tr>
@@ -106,6 +107,7 @@ import { formatBytes } from '../../core/utils/format.utils';
               }
             </tbody>
           </table>
+          </div>
         }
       </div>
     }

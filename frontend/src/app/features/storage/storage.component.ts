@@ -80,6 +80,7 @@ interface RemountState {
 
     @if (!devLoading && !devError && devices.length > 0) {
       <div class="card">
+        <div class="table-responsive">
         <table class="table">
           <thead>
             <tr>
@@ -194,6 +195,7 @@ interface RemountState {
             }
           </tbody>
         </table>
+        </div>
       </div>
 
       <!-- Nota fstab -->
