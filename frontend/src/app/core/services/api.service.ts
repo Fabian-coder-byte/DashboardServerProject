@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { SystemOverview, MetricSample, SystemSpecs, CpuInfo, NetworkInfo } from '../models/system.model';
 import { Container, ContainerDetail, DockerInfo } from '../models/docker.model';
-import { Service, ServiceHealth, ServiceActionResult, ServiceDetail, Alert, BlockDevice, BackupData } from '../models/service.model';
+import { Service, ServiceHealth, ServiceActionResult, ServiceDetail, Alert, BlockDevice, BackupData, StorageUsage } from '../models/service.model';
 import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
@@ -98,5 +98,10 @@ export class ApiService {
 
   getBackupStatus(): Observable<BackupData> {
     return this.http.get<BackupData>(`${this.base}/backup`);
+  }
+
+  getStorageUsage(refresh = false): Observable<StorageUsage> {
+    const qs = refresh ? '?refresh=true' : '';
+    return this.http.get<StorageUsage>(`${this.base}/storage/usage${qs}`);
   }
 }

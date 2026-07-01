@@ -27,6 +27,10 @@ export const routes: Routes = [
     loadComponent: () => import('./features/storage/storage.component').then(m => m.StorageComponent)
   },
   {
+    path: 'storage/usage',
+    loadComponent: () => import('./features/storage/storage-usage.component').then(m => m.StorageUsageComponent)
+  },
+  {
     path: 'logs',
     loadComponent: () => import('./features/logs/logs.component').then(m => m.LogsComponent)
   },

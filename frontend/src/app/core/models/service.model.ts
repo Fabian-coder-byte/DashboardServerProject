@@ -99,6 +99,41 @@ export interface BackupData {
   backups: BackupEntry[];
 }
 
+export interface StorageArea {
+  key: string;
+  label: string;
+  service: string;
+  path: string;
+  icon: string;
+  exists: boolean;
+  sizeBytes: number;
+  sizeFormatted: string;
+  percentOfDisk: number;
+  fileCount: number;
+  folderCount: number;
+}
+
+export interface StorageUsage {
+  disk: {
+    mount: string;
+    totalBytes: number;
+    usedBytes: number;
+    freeBytes: number;
+    usedPercent: number;
+    available: boolean;
+  };
+  areas: StorageArea[];
+  summary: {
+    knownAreasBytes: number;
+    knownAreasFormatted: string;
+    otherBytes: number;
+    otherFormatted: string;
+    largestArea: string | null;
+    lastUpdated: string;
+  };
+  cached: boolean;
+}
+
 export interface StorageFilesystem {
   mount: string;
   filesystem: string;

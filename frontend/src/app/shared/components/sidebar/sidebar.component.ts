@@ -17,6 +17,7 @@ import { CommonModule } from '@angular/common';
         @for (item of navItems; track item.path) {
           <a [routerLink]="item.path"
              routerLinkActive="active"
+             [routerLinkActiveOptions]="{ exact: true }"
              class="sidebar__item"
              [title]="item.label"
              (click)="close()">
@@ -144,7 +145,8 @@ export class SidebarComponent {
     { path: '/system',    label: 'Sistema',    icon: 'cpu-fill' },
     { path: '/docker',    label: 'Docker',     icon: 'box-seam-fill' },
     { path: '/services',  label: 'Servizi',    icon: 'layers-fill' },
-    { path: '/storage',   label: 'Storage',    icon: 'hdd-fill' },
+    { path: '/storage',       label: 'Storage',    icon: 'hdd-fill' },
+    { path: '/storage/usage', label: 'Utilizzo',   icon: 'pie-chart-fill' },
     { path: '/network',   label: 'Rete',       icon: 'wifi' },
     { path: '/backup',    label: 'Backup',     icon: 'cloud-check-fill' },
     { path: '/logs',      label: 'Log',        icon: 'terminal-fill' },

@@ -3,6 +3,7 @@ const si = require('systeminformation');
 const { exec } = require('child_process');
 const { promisify } = require('util');
 const router = express.Router();
+const { getStorageUsage } = require('../services/storageUsage');
 
 const execAsync = promisify(exec);
 
@@ -87,6 +88,17 @@ router.get('/', async (req, res) => {
       })),
       filesystems
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/storage/usage — spazio per area/servizio con cache 5 min
+router.get('/usage', async (req, res) => {
+  const forceRefresh = req.query.refresh === 'true';
+  try {
+    const data = await getStorageUsage(forceRefresh);
+    res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
