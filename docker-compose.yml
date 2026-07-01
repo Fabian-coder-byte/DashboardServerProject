@@ -16,10 +16,7 @@ services:
       # ── Raspberry Pi: device-tree con modello hardware ────────────
       # Decommentare solo su Raspberry Pi — assente su altri sistemi
       # - /proc/device-tree:/host/device-tree:ro
-
-      # ── Storage principale ────────────────────────────────────────
-      - /mnt/storage1:/mnt/storage1:ro
-
+      - /mnt/storage1:/mnt/storage1
     environment:
       - NODE_ENV=production
       - PORT=5005
