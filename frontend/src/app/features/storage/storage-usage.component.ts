@@ -6,17 +6,22 @@ import { StorageUsage, StorageArea } from '../../core/models/service.model';
 import { formatBytes, progressClass } from '../../core/utils/format.utils';
 
 const AREA_COLORS: Record<string, string> = {
-  movies:        '#a855f7',
-  tvShows:       '#3b82f6',
-  cartoonMovies: '#ec4899',
-  cartoonShows:  '#f97316',
-  documentaries: '#14b8a6',
-  photos:        '#22c55e',
-  documents:     '#06b6d4',
-  books:         '#f59e0b',
-  comics:        '#6366f1',
-  downloads:     '#94a3b8',
-  backups:       '#ef4444',
+  movies:          '#a855f7',
+  tvShows:         '#3b82f6',
+  cartoonMovies:   '#ec4899',
+  cartoonShows:    '#f97316',
+  animeMovies:     '#d946ef',
+  animeShows:      '#0ea5e9',
+  documentaries:   '#14b8a6',
+  photosImmichApp: '#22c55e',
+  photosExternal:  '#16a34a',
+  photosImport:    '#4ade80',
+  documents:       '#06b6d4',
+  books:           '#f59e0b',
+  comics:          '#6366f1',
+  games:           '#eab308',
+  downloads:       '#94a3b8',
+  backups:         '#ef4444',
 };
 
 @Component({
