@@ -26,80 +26,238 @@ interface ActionFeedback {
     @if (error)   { <div class="error-msg"><i class="bi bi-exclamation-triangle-fill"></i> {{ error }}</div> }
 
     @if (!loading && !error) {
-      <div class="grid grid-3">
-        @for (svc of services; track svc.name) {
-          <div class="card service-card" [class.card-busy]="isBusy(svc.name)">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start">
-              <div>
-                <div style="font-size: 15px; font-weight: 600; margin-bottom: 4px">{{ svc.name }}</div>
-                <span [class]="'badge badge-' + categoryColor(svc.category)">{{ svc.category }}</span>
-              </div>
-              <span [class]="'badge badge-' + healthBadge(svc.name)">
-                @if (isBusy(svc.name)) {
-                  <span class="spinner-xs"></span>
-                }
-                {{ healthStatus(svc.name) }}
-              </span>
-            </div>
-
-            <p style="color: var(--text-muted); font-size: 13px; margin: 12px 0">{{ svc.description }}</p>
-
-            <div class="service-meta">
-              <span><i class="bi bi-plug"></i> :{{ svc.port }}</span>
-              <span><i class="bi bi-shield"></i> {{ svc.exposure }}</span>
-              <span><i class="bi bi-exclamation-circle"></i> {{ svc.criticality }}</span>
-            </div>
-
-            @if (feedback(svc.name); as fb) {
-              <div [class]="'action-feedback feedback-' + fb.type">
-                <i [class]="'bi bi-' + (fb.type === 'success' ? 'check-circle-fill' : 'x-circle-fill')"></i>
-                {{ fb.message }}
-              </div>
+      <!-- Toolbar: filtri categoria + stato + toggle vista -->
+      <div class="toolbar">
+        <div class="filter-group">
+          <div class="filter-pills">
+            <button class="pill" [class.active]="!selectedCategory" (click)="setCategory(null)">
+              Tutti <span class="pill-count">{{ services.length }}</span>
+            </button>
+            @for (cat of categories; track cat) {
+              <button class="pill" [class.active]="selectedCategory === cat" (click)="setCategory(cat)">
+                {{ cat }} <span class="pill-count">{{ countByCategory(cat) }}</span>
+              </button>
             }
-
-            <div style="display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap">
-              <a [routerLink]="['/services', svc.name]" class="btn btn-secondary btn-sm">
-                <i class="bi bi-info-circle"></i> Dettagli
-              </a>
-              @if (svc.url_local) {
-                <a [href]="svc.url_local" target="_blank" class="btn btn-primary btn-sm">
-                  <i class="bi bi-box-arrow-up-right"></i> Apri LAN
-                </a>
-              }
-              @if (svc.url_tailscale) {
-                <a [href]="svc.url_tailscale" target="_blank" class="btn btn-secondary btn-sm">
-                  <i class="bi bi-shield-lock"></i> Tailscale
-                </a>
-              }
-
-              @if (hasComposeControl(svc)) {
-                <div class="compose-actions">
-                  @if (healthStatus(svc.name) !== 'online') {
-                    <button class="btn btn-success btn-sm"
-                            [disabled]="isBusy(svc.name)"
-                            (click)="runAction(svc, 'start')">
-                      <i class="bi bi-play-fill"></i> Avvia
-                    </button>
-                  }
-                  @if (healthStatus(svc.name) === 'online') {
-                    <button class="btn btn-warning btn-sm"
-                            [disabled]="isBusy(svc.name)"
-                            (click)="runAction(svc, 'restart')">
-                      <i class="bi bi-arrow-clockwise"></i> Riavvia
-                    </button>
-                    <button class="btn btn-danger btn-sm"
-                            [disabled]="isBusy(svc.name)"
-                            (click)="runAction(svc, 'stop')">
-                      <i class="bi bi-stop-fill"></i> Ferma
-                    </button>
-                  }
-                </div>
-              }
-            </div>
           </div>
-        }
+          <div class="filter-divider"></div>
+          <div class="status-pills">
+            <button class="pill pill-status"
+                    [class.active]="selectedStatus === 'all'"
+                    (click)="setStatus('all')">
+              <i class="bi bi-circle"></i> Tutti
+            </button>
+            <button class="pill pill-status pill-online"
+                    [class.active]="selectedStatus === 'online'"
+                    (click)="setStatus('online')">
+              <i class="bi bi-circle-fill"></i> Online
+              <span class="pill-count">{{ online }}</span>
+            </button>
+            <button class="pill pill-status pill-offline"
+                    [class.active]="selectedStatus === 'offline'"
+                    (click)="setStatus('offline')">
+              <i class="bi bi-circle-fill"></i> Offline
+              <span class="pill-count">{{ offline }}</span>
+            </button>
+          </div>
+        </div>
+        <div class="right-controls">
+          <div class="search-box">
+            <i class="bi bi-search search-icon"></i>
+            <input
+              type="text"
+              class="search-input"
+              placeholder="Cerca servizio..."
+              [value]="searchQuery"
+              (input)="searchQuery = $any($event.target).value"
+            />
+            @if (searchQuery) {
+              <button class="search-clear" (click)="searchQuery = ''" title="Cancella">
+                <i class="bi bi-x"></i>
+              </button>
+            }
+          </div>
+          <div class="view-toggle">
+            <button class="view-btn" [class.active]="viewMode === 'card'" (click)="viewMode = 'card'" title="Vista card">
+              <i class="bi bi-grid-3x3-gap-fill"></i>
+            </button>
+            <button class="view-btn" [class.active]="viewMode === 'table'" (click)="viewMode = 'table'" title="Vista tabella">
+              <i class="bi bi-table"></i>
+            </button>
+          </div>
+        </div>
       </div>
 
+      <!-- ── CARD VIEW ── -->
+      @if (viewMode === 'card') {
+        <div class="grid grid-3">
+          @for (svc of filteredServices; track svc.name) {
+            <div class="card service-card" [class.card-busy]="isBusy(svc.name)">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start">
+                <div>
+                  <div style="font-size: 15px; font-weight: 600; margin-bottom: 4px">{{ svc.name }}</div>
+                  <span [class]="'badge badge-' + categoryColor(svc.category)">{{ svc.category }}</span>
+                </div>
+                <span [class]="'badge badge-' + healthBadge(svc.name)">
+                  @if (isBusy(svc.name)) { <span class="spinner-xs"></span> }
+                  {{ healthStatus(svc.name) }}
+                </span>
+              </div>
+
+              <p style="color: var(--text-muted); font-size: 13px; margin: 12px 0">{{ svc.description }}</p>
+
+              <div class="service-meta">
+                <span><i class="bi bi-plug"></i> :{{ svc.port }}</span>
+                <span><i class="bi bi-shield"></i> {{ svc.exposure }}</span>
+                <span><i class="bi bi-exclamation-circle"></i> {{ svc.criticality }}</span>
+              </div>
+
+              @if (feedback(svc.name); as fb) {
+                <div [class]="'action-feedback feedback-' + fb.type">
+                  <i [class]="'bi bi-' + (fb.type === 'success' ? 'check-circle-fill' : 'x-circle-fill')"></i>
+                  {{ fb.message }}
+                </div>
+              }
+
+              <div style="display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap">
+                <a [routerLink]="['/services', svc.name]" class="btn btn-secondary btn-sm">
+                  <i class="bi bi-info-circle"></i> Dettagli
+                </a>
+                @if (svc.url_local) {
+                  <a [href]="svc.url_local" target="_blank" class="btn btn-primary btn-sm">
+                    <i class="bi bi-box-arrow-up-right"></i> Apri LAN
+                  </a>
+                }
+                @if (svc.url_tailscale) {
+                  <a [href]="svc.url_tailscale" target="_blank" class="btn btn-secondary btn-sm">
+                    <i class="bi bi-shield-lock"></i> Tailscale
+                  </a>
+                }
+
+                @if (hasComposeControl(svc)) {
+                  <div class="compose-actions">
+                    @if (healthStatus(svc.name) !== 'online' && !isContainerPaused(svc.name)) {
+                      <button class="btn btn-success btn-sm"
+                              [disabled]="isBusy(svc.name)"
+                              (click)="runAction(svc, 'start')">
+                        <i class="bi bi-play-fill"></i> Avvia
+                      </button>
+                    }
+                    @if (isContainerPaused(svc.name)) {
+                      <button class="btn btn-success btn-sm"
+                              [disabled]="isBusy(svc.name)"
+                              (click)="runAction(svc, 'unpause')">
+                        <i class="bi bi-play-circle-fill"></i> Riprendi
+                      </button>
+                    }
+                    @if (healthStatus(svc.name) === 'online' && !isContainerPaused(svc.name)) {
+                      <button class="btn btn-warning btn-sm"
+                              [disabled]="isBusy(svc.name)"
+                              (click)="runAction(svc, 'restart')">
+                        <i class="bi bi-arrow-clockwise"></i> Riavvia
+                      </button>
+                      <button class="btn btn-pause btn-sm"
+                              [disabled]="isBusy(svc.name)"
+                              (click)="runAction(svc, 'pause')">
+                        <i class="bi bi-pause-fill"></i> Pausa
+                      </button>
+                      <button class="btn btn-danger btn-sm"
+                              [disabled]="isBusy(svc.name)"
+                              (click)="runAction(svc, 'stop')">
+                        <i class="bi bi-stop-fill"></i> Ferma
+                      </button>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- ── TABLE VIEW ── -->
+      @if (viewMode === 'table') {
+        <div class="table-wrap card">
+          <table class="svc-table">
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Categoria</th>
+                <th>Porta</th>
+                <th>Esposizione</th>
+                <th>Criticità</th>
+                <th>Stato</th>
+                <th>Azioni</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (svc of filteredServices; track svc.name) {
+                <tr [class.row-busy]="isBusy(svc.name)">
+                  <td>
+                    <div class="svc-name">{{ svc.name }}</div>
+                    <div class="svc-desc">{{ svc.description }}</div>
+                  </td>
+                  <td>
+                    <span [class]="'badge badge-' + categoryColor(svc.category)">{{ svc.category }}</span>
+                  </td>
+                  <td><code class="port-code">:{{ svc.port }}</code></td>
+                  <td style="font-size: 13px; color: var(--text-muted)">{{ svc.exposure }}</td>
+                  <td><span [class]="'crit-' + svc.criticality">{{ svc.criticality }}</span></td>
+                  <td>
+                    <span [class]="'badge badge-' + healthBadge(svc.name)">
+                      @if (isBusy(svc.name)) { <span class="spinner-xs"></span> }
+                      {{ healthStatus(svc.name) }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="table-actions">
+                      <a [routerLink]="['/services', svc.name]" class="btn btn-secondary btn-sm" title="Dettagli">
+                        <i class="bi bi-info-circle"></i>
+                      </a>
+                      @if (svc.url_local) {
+                        <a [href]="svc.url_local" target="_blank" class="btn btn-primary btn-sm" title="Apri LAN">
+                          <i class="bi bi-box-arrow-up-right"></i> LAN
+                        </a>
+                      }
+                      @if (hasComposeControl(svc) && healthStatus(svc.name) !== 'online' && !isContainerPaused(svc.name)) {
+                        <button class="btn btn-success btn-sm" title="Avvia"
+                                [disabled]="isBusy(svc.name)" (click)="runAction(svc, 'start')">
+                          <i class="bi bi-play-fill"></i>
+                        </button>
+                      }
+                      @if (hasComposeControl(svc) && isContainerPaused(svc.name)) {
+                        <button class="btn btn-success btn-sm" title="Riprendi"
+                                [disabled]="isBusy(svc.name)" (click)="runAction(svc, 'unpause')">
+                          <i class="bi bi-play-circle-fill"></i>
+                        </button>
+                      }
+                      @if (hasComposeControl(svc) && healthStatus(svc.name) === 'online' && !isContainerPaused(svc.name)) {
+                        <button class="btn btn-warning btn-sm" title="Riavvia"
+                                [disabled]="isBusy(svc.name)" (click)="runAction(svc, 'restart')">
+                          <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                        <button class="btn btn-pause btn-sm" title="Metti in pausa (congela)"
+                                [disabled]="isBusy(svc.name)" (click)="runAction(svc, 'pause')">
+                          <i class="bi bi-pause-fill"></i>
+                        </button>
+                        <button class="btn btn-danger btn-sm" title="Ferma completamente"
+                                [disabled]="isBusy(svc.name)" (click)="runAction(svc, 'stop')">
+                          <i class="bi bi-stop-fill"></i>
+                        </button>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      @if (filteredServices.length === 0 && services.length > 0) {
+        <div class="empty-msg">
+          Nessun servizio corrisponde ai filtri selezionati.
+        </div>
+      }
       @if (services.length === 0) {
         <div class="empty-msg">
           Nessun servizio configurato. Modifica <code>data/service-catalog.yml</code>.
@@ -109,6 +267,127 @@ interface ActionFeedback {
     </div><!-- /page -->
   `,
   styles: [`
+    /* ── toolbar ── */
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .filter-pills {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .filter-divider {
+      display: none; /* separator usato solo se pills inline */
+    }
+    .status-pills {
+      display: flex;
+      gap: 6px;
+    }
+    .pill-online { color: #75b798; }
+    .pill-online.active { background: #198754; border-color: #198754; color: #fff; }
+    .pill-offline { color: #ea868f; }
+    .pill-offline.active { background: #dc3545; border-color: #dc3545; color: #fff; }
+    .pill-status { font-size: 12px; padding: 4px 11px; }
+    .pill-status i { font-size: 9px; }
+    .pill {
+      background: var(--bg-hover);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all .15s;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .pill:hover { border-color: var(--accent-blue); color: var(--text); }
+    .pill.active { background: var(--accent-blue); border-color: var(--accent-blue); color: #fff; }
+    .pill-count {
+      background: rgba(255,255,255,.15);
+      border-radius: 10px;
+      padding: 0 6px;
+      font-size: 11px;
+    }
+    .pill.active .pill-count { background: rgba(255,255,255,.3); }
+
+    /* ── right controls (search + view toggle) ── */
+    .right-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .search-box {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .search-icon {
+      position: absolute;
+      left: 10px;
+      color: var(--text-muted);
+      font-size: 13px;
+      pointer-events: none;
+    }
+    .search-input {
+      background: var(--bg-hover);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 6px 32px 6px 30px;
+      font-size: 13px;
+      width: 200px;
+      outline: none;
+      transition: border-color .15s, width .2s;
+    }
+    .search-input::placeholder { color: var(--text-muted); }
+    .search-input:focus {
+      border-color: var(--accent-blue);
+      width: 240px;
+    }
+    .search-clear {
+      position: absolute;
+      right: 8px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 0;
+      font-size: 15px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+    }
+    .search-clear:hover { color: var(--text); }
+
+    /* ── view toggle ── */
+    .view-toggle { display: flex; gap: 4px; }
+    .view-btn {
+      background: var(--bg-hover);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 6px 11px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all .15s;
+      font-size: 15px;
+    }
+    .view-btn:hover { border-color: var(--accent-blue); color: var(--text); }
+    .view-btn.active { background: var(--accent-blue); border-color: var(--accent-blue); color: #fff; }
+
+    /* ── card view ── */
     .service-card { transition: border-color .15s, opacity .15s; }
     .service-card:hover { border-color: var(--accent-blue); }
     .service-card.card-busy { opacity: .75; pointer-events: none; }
@@ -119,18 +398,61 @@ interface ActionFeedback {
       color: var(--text-muted);
       span { display: flex; align-items: center; gap: 4px; }
     }
-    .compose-actions {
-      display: flex;
-      gap: 6px;
-      margin-left: auto;
+    .compose-actions { display: flex; gap: 6px; margin-left: auto; }
+
+    /* ── table view ── */
+    .table-wrap { overflow-x: auto; padding: 0; }
+    .svc-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
     }
+    .svc-table th {
+      text-align: left;
+      padding: 11px 16px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .svc-table td {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .svc-table tbody tr:last-child td { border-bottom: none; }
+    .svc-table tbody tr:hover td { background: var(--bg-hover); }
+    .svc-table tr.row-busy { opacity: .6; pointer-events: none; }
+    .svc-name { font-weight: 600; }
+    .svc-desc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .port-code {
+      background: rgba(96,165,250,.12);
+      border: 1px solid rgba(96,165,250,.3);
+      color: var(--accent-blue);
+      padding: 2px 8px;
+      border-radius: 5px;
+      font-size: 13px;
+      font-family: monospace;
+    }
+    .crit-high   { color: #ea868f; font-weight: 600; font-size: 13px; }
+    .crit-medium { color: #e0a900; font-size: 13px; }
+    .crit-low    { color: var(--text-muted); font-size: 13px; }
+    .table-actions { display: flex; gap: 5px; align-items: center; flex-wrap: nowrap; }
+
+    /* ── buttons ── */
     .btn-success  { background: #198754; color: #fff; border: none; }
     .btn-success:hover:not(:disabled)  { background: #157347; }
     .btn-warning  { background: #e0a900; color: #000; border: none; }
     .btn-warning:hover:not(:disabled)  { background: #c69500; }
     .btn-danger   { background: #dc3545; color: #fff; border: none; }
     .btn-danger:hover:not(:disabled)   { background: #b02a37; }
+    .btn-pause    { background: #0d6efd; color: #fff; border: none; }
+    .btn-pause:hover:not(:disabled)    { background: #0b5ed7; }
     button:disabled { opacity: .5; cursor: not-allowed; }
+
     .action-feedback {
       font-size: 12px;
       padding: 6px 10px;
@@ -142,6 +464,7 @@ interface ActionFeedback {
     }
     .feedback-success { background: rgba(25,135,84,.15); color: #75b798; }
     .feedback-error   { background: rgba(220,53,69,.15);  color: #ea868f; }
+
     .spinner-xs {
       display: inline-block;
       width: 10px; height: 10px;
@@ -163,7 +486,13 @@ export class ServicesComponent implements OnInit {
   loading = true;
   error?: string;
 
+  viewMode: 'card' | 'table' = 'card';
+  selectedCategory: string | null = null;
+  selectedStatus: 'all' | 'online' | 'offline' = 'all';
+  searchQuery = '';
+
   private busySet   = new Set<string>();
+  private pausedSet = new Set<string>();
   private feedbacks = new Map<string, ActionFeedback>();
 
   categoryColor = categoryColor;
@@ -171,6 +500,36 @@ export class ServicesComponent implements OnInit {
   get online()  { return this.health.filter(h => h.status === 'online').length; }
   get offline() { return this.health.filter(h => h.status === 'offline').length; }
   get unknown() { return this.health.filter(h => h.status === 'unknown').length; }
+
+  get categories(): string[] {
+    return [...new Set(this.services.map(s => s.category))].sort();
+  }
+
+  get filteredServices(): Service[] {
+    const q = this.searchQuery.toLowerCase().trim();
+    return this.services.filter(s => {
+      if (this.selectedCategory && s.category !== this.selectedCategory) return false;
+      if (this.selectedStatus !== 'all' && this.healthStatus(s.name) !== this.selectedStatus) return false;
+      if (q && !s.name.toLowerCase().includes(q) && !s.description?.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }
+
+  countByCategory(cat: string): number {
+    return this.services.filter(s => s.category === cat).length;
+  }
+
+  setCategory(cat: string | null): void {
+    this.selectedCategory = cat;
+  }
+
+  setStatus(status: 'all' | 'online' | 'offline'): void {
+    this.selectedStatus = status;
+  }
+
+  isContainerPaused(name: string): boolean {
+    return this.pausedSet.has(name);
+  }
 
   healthStatus(name: string): string {
     return this.health.find(h => h.name === name)?.status ?? 'unknown';
@@ -195,13 +554,16 @@ export class ServicesComponent implements OnInit {
     return svc.type === 'docker' && !!(svc.compose_path || svc.compose_project);
   }
 
-  runAction(svc: Service, action: 'start' | 'stop' | 'restart'): void {
-    const actionLabel = { start: 'avviare', stop: 'fermare', restart: 'riavviare' }[action];
+  runAction(svc: Service, action: 'start' | 'stop' | 'restart' | 'pause' | 'unpause'): void {
+    const actionLabel: Record<string, string> = {
+      start: 'avviare', stop: 'fermare completamente', restart: 'riavviare',
+      pause: 'mettere in pausa', unpause: 'riprendere'
+    };
     const needsConfirm = (action === 'stop' || action === 'restart') && svc.criticality === 'high';
 
     if (needsConfirm) {
       const ok = window.confirm(
-        `Sei sicuro di voler ${actionLabel} "${svc.name}"?\n\nQuesto servizio è marcato come CRITICITÀ ALTA.`
+        `Sei sicuro di voler ${actionLabel[action]} "${svc.name}"?\n\nQuesto servizio è marcato come CRITICITÀ ALTA.`
       );
       if (!ok) return;
     }
@@ -212,11 +574,20 @@ export class ServicesComponent implements OnInit {
     this.api.serviceAction(svc.name, action).subscribe({
       next: (result) => {
         this.busySet.delete(svc.name);
+        if (action === 'pause')   this.pausedSet.add(svc.name);
+        if (action === 'unpause') this.pausedSet.delete(svc.name);
+        if (action === 'start')   this.pausedSet.delete(svc.name);
+        if (action === 'stop')    this.pausedSet.delete(svc.name);
+
+        const verbMap: Record<string, string> = {
+          start: 'avviati', stop: 'fermati', restart: 'riavviati',
+          pause: 'messi in pausa', unpause: 'ripresi'
+        };
         const msg = result.failed.length === 0
-          ? `${result.succeeded.length} container ${action === 'start' ? 'avviati' : action === 'stop' ? 'fermati' : 'riavviati'} correttamente`
+          ? `${result.succeeded.length} container ${verbMap[action]} correttamente`
           : `Completato con ${result.failed.length} errori`;
         this.setFeedback(svc.name, result.failed.length === 0 ? 'success' : 'error', msg);
-        this.refreshHealth(svc.name);
+        if (action !== 'pause') this.refreshHealth(svc.name);
       },
       error: (err) => {
         this.busySet.delete(svc.name);
@@ -232,7 +603,6 @@ export class ServicesComponent implements OnInit {
   }
 
   private refreshHealth(name: string): void {
-    // Piccolo delay per dare tempo ai container di cambiare stato
     setTimeout(() => {
       this.api.getServiceHealth(name).subscribe({
         next: (h) => {

@@ -43,7 +43,9 @@ router.get('/health', async (req, res) => {
     const url = resolveHealthUrl(svc.healthcheck.url);
     const start = Date.now();
     try {
-      await axios.get(url, { timeout: 3000 });
+      // validateStatus: () => true → qualsiasi risposta HTTP (200, 302, 401...) = online
+      // Solo errori di rete o timeout contano come offline
+      await axios.get(url, { timeout: 3000, maxRedirects: 5, validateStatus: () => true });
       return { name: svc.name, status: 'online', responseTime: Date.now() - start };
     } catch (err) {
       log.warn('services', `health check fallito: ${svc.name} (${url})`, err.message);
@@ -54,11 +56,11 @@ router.get('/health', async (req, res) => {
   res.json(checks);
 });
 
-// POST /api/services/:name/compose  { action: 'start' | 'stop' | 'restart' }
+// POST /api/services/:name/compose  { action: 'start' | 'stop' | 'restart' | 'pause' | 'unpause' }
 router.post('/:name/compose', async (req, res) => {
   const { action } = req.body;
-  if (!['start', 'stop', 'restart'].includes(action)) {
-    return res.status(400).json({ error: 'Azione non valida. Usa: start, stop, restart.' });
+  if (!['start', 'stop', 'restart', 'pause', 'unpause'].includes(action)) {
+    return res.status(400).json({ error: 'Azione non valida. Usa: start, stop, restart, pause, unpause.' });
   }
 
   const service = loadCatalog().find(s => s.name.toLowerCase() === req.params.name.toLowerCase());
@@ -88,6 +90,8 @@ router.post('/:name/compose', async (req, res) => {
         if (action === 'start')   await container.start();
         if (action === 'stop')    await container.stop({ t: 10 });
         if (action === 'restart') await container.restart({ t: 10 });
+        if (action === 'pause')   await container.pause();
+        if (action === 'unpause') await container.unpause();
       } catch (err) {
         // 304 = container già nello stato richiesto, non è un errore reale
         if (err.statusCode !== 304) throw err;
@@ -127,7 +131,7 @@ router.get('/:name/details', async (req, res) => {
     const url = resolveHealthUrl(service.healthcheck.url);
     const start = Date.now();
     try {
-      await axios.get(url, { timeout: 3000 });
+      await axios.get(url, { timeout: 3000, maxRedirects: 5, validateStatus: () => true });
       health = { name: service.name, status: 'online', responseTime: Date.now() - start };
     } catch {
       health = { name: service.name, status: 'offline', responseTime: null };
@@ -229,7 +233,7 @@ router.get('/:name/health', async (req, res) => {
   const url = resolveHealthUrl(service.healthcheck.url);
   const start = Date.now();
   try {
-    await axios.get(url, { timeout: 3000 });
+    await axios.get(url, { timeout: 3000, maxRedirects: 5, validateStatus: () => true });
     res.json({ name: service.name, status: 'online', responseTime: Date.now() - start });
   } catch {
     res.json({ name: service.name, status: 'offline', responseTime: null });
