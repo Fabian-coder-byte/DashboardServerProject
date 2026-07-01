@@ -10,22 +10,46 @@ const STORAGE_MOUNT = process.env.STORAGE_MOUNT || '/mnt/storage1';
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 const STORAGE_AREAS = [
-  { key: 'movies',          label: 'Film',                      service: 'Jellyfin',    path: `${STORAGE_MOUNT}/media/movies`,             icon: 'film' },
-  { key: 'tvShows',         label: 'Serie TV',                  service: 'Jellyfin',    path: `${STORAGE_MOUNT}/media/tv-shows`,           icon: 'tv' },
-  { key: 'cartoonMovies',   label: 'Film Animati',               service: 'Jellyfin',    path: `${STORAGE_MOUNT}/media/cartoon-movies`,     icon: 'play-circle-fill' },
-  { key: 'cartoonShows',    label: 'Cartoni',                    service: 'Jellyfin',    path: `${STORAGE_MOUNT}/media/cartoon-shows`,      icon: 'play-circle-fill' },
-  { key: 'animeMovies',     label: 'Film Anime',                 service: 'Jellyfin',    path: `${STORAGE_MOUNT}/media/anime-movies`,       icon: 'play-circle-fill' },
-  { key: 'animeShows',      label: 'Serie Anime',                service: 'Jellyfin',    path: `${STORAGE_MOUNT}/media/anime-shows`,        icon: 'play-circle-fill' },
-  { key: 'documentaries',   label: 'Documentari',                service: 'Jellyfin',    path: `${STORAGE_MOUNT}/media/documentary-movies`, icon: 'camera-video-fill' },
-  { key: 'photosImmichApp', label: 'Foto (Immich App)',          service: 'Immich',      path: `${STORAGE_MOUNT}/photos/immich-app`,        icon: 'images' },
-  { key: 'photosExternal',  label: 'Foto (Libreria Esterna)',    service: 'Immich',      path: `${STORAGE_MOUNT}/photos/external-library`,  icon: 'images' },
-  { key: 'photosImport',    label: 'Foto (Import)',              service: 'Immich',      path: `${STORAGE_MOUNT}/photos/import`,            icon: 'images' },
-  { key: 'documents',       label: 'Documenti',                  service: 'Nextcloud',   path: `${STORAGE_MOUNT}/docs`,                     icon: 'folder-fill' },
-  { key: 'books',           label: 'Libri',                      service: 'Calibre',     path: `${STORAGE_MOUNT}/books/calibre`,            icon: 'book-fill' },
-  { key: 'comics',          label: 'Fumetti',                    service: 'Kavita',      path: `${STORAGE_MOUNT}/books/comics`,             icon: 'journals' },
-  { key: 'games',           label: 'Giochi',                     service: 'Games',       path: `${STORAGE_MOUNT}/games`,                    icon: 'controller' },
-  { key: 'downloads',       label: 'Download',                   service: 'qBittorrent', path: `${STORAGE_MOUNT}/downloads`,                icon: 'download' },
-  { key: 'backups',         label: 'Backup',                     service: 'Backup',      path: `${STORAGE_MOUNT}/backups`,                  icon: 'cloud-arrow-up-fill' },
+  // ── Media (Jellyfin) ──────────────────────────────────────────────────────
+  { key: 'movies',            label: 'Film',                     service: 'Jellyfin',      path: `${STORAGE_MOUNT}/media/movies`,               icon: 'film' },
+  { key: 'tvShows',           label: 'Serie TV',                 service: 'Jellyfin',      path: `${STORAGE_MOUNT}/media/tv-shows`,             icon: 'tv' },
+  { key: 'cartoonMovies',     label: 'Film Animati',              service: 'Jellyfin',      path: `${STORAGE_MOUNT}/media/cartoon-movies`,       icon: 'play-circle-fill' },
+  { key: 'cartoonShows',      label: 'Cartoni',                   service: 'Jellyfin',      path: `${STORAGE_MOUNT}/media/cartoon-shows`,        icon: 'play-circle-fill' },
+  { key: 'animeMovies',       label: 'Film Anime',                service: 'Jellyfin',      path: `${STORAGE_MOUNT}/media/anime-movies`,         icon: 'play-circle-fill' },
+  { key: 'animeShows',        label: 'Serie Anime',               service: 'Jellyfin',      path: `${STORAGE_MOUNT}/media/anime-shows`,          icon: 'play-circle-fill' },
+  { key: 'documentaryMovies', label: 'Documentari (Film)',        service: 'Jellyfin',      path: `${STORAGE_MOUNT}/media/documentary-movies`,   icon: 'camera-video-fill' },
+  { key: 'documentaryShows',  label: 'Documentari (Serie)',       service: 'Jellyfin',      path: `${STORAGE_MOUNT}/media/documentary-shows`,    icon: 'camera-video-fill' },
+  { key: 'music',             label: 'Musica',                    service: 'Navidrome',     path: `${STORAGE_MOUNT}/media/music`,                icon: 'music-note-beamed' },
+
+  // ── Audiolibri (Audiobookshelf) ───────────────────────────────────────────
+  { key: 'audiobooks',        label: 'Audiolibri & Podcast',       service: 'Audiobookshelf', path: `${STORAGE_MOUNT}/audiobooks`,                icon: 'headphones' },
+
+  // ── Foto (Immich) ─────────────────────────────────────────────────────────
+  { key: 'photosImmichApp',   label: 'Foto (Immich App)',          service: 'Immich',        path: `${STORAGE_MOUNT}/photos/immich-app`,          icon: 'images' },
+  { key: 'photosExternal',    label: 'Foto (Libreria Esterna)',     service: 'Immich',        path: `${STORAGE_MOUNT}/photos/external-library`,    icon: 'images' },
+  { key: 'photosImport',      label: 'Foto (Import)',               service: 'Immich',        path: `${STORAGE_MOUNT}/photos/import`,              icon: 'images' },
+
+  // ── Documenti (Nextcloud) ─────────────────────────────────────────────────
+  { key: 'documents',         label: 'Documenti',                   service: 'Nextcloud',     path: `${STORAGE_MOUNT}/documents`,                  icon: 'folder-fill' },
+
+  // ── Libri & Fumetti ───────────────────────────────────────────────────────
+  { key: 'books',             label: 'Libri (Calibre)',             service: 'Calibre',       path: `${STORAGE_MOUNT}/books/calibre`,              icon: 'book-fill' },
+  { key: 'ebooksRaw',         label: 'Ebook (Kindle/PDF)',           service: 'File Browser',  path: `${STORAGE_MOUNT}/books/ebooks`,               icon: 'file-earmark-pdf' },
+  { key: 'comics',            label: 'Fumetti & Manga (Kavita)',     service: 'Kavita',        path: `${STORAGE_MOUNT}/books/kavita`,               icon: 'journals' },
+
+  // ── Giochi ────────────────────────────────────────────────────────────────
+  { key: 'games',             label: 'Giochi',                      service: 'Games',         path: `${STORAGE_MOUNT}/games`,                      icon: 'controller' },
+
+  // ── Note (Syncthing) ──────────────────────────────────────────────────────
+  { key: 'notes',             label: 'Note (Obsidian)',             service: 'Syncthing',     path: `${STORAGE_MOUNT}/notes`,                      icon: 'journal-text' },
+
+  // ── DevOps ────────────────────────────────────────────────────────────────
+  { key: 'gitea',             label: 'Gitea (repository)',           service: 'Gitea',         path: `${STORAGE_MOUNT}/gitea`,                      icon: 'git' },
+  { key: 'dockerConfig',      label: 'Config Docker',                service: 'Portainer',     path: `${STORAGE_MOUNT}/docker`,                     icon: 'box-seam' },
+
+  // ── Download & Backup (percorsi previsti, potrebbero non esistere ancora)
+  { key: 'downloads',         label: 'Download',                     service: 'qBittorrent',   path: `${STORAGE_MOUNT}/downloads`,                  icon: 'download' },
+  { key: 'backups',           label: 'Backup',                       service: 'Backup',        path: `${STORAGE_MOUNT}/backups`,                    icon: 'cloud-arrow-up-fill' },
 ];
 
 let _cache = null;
